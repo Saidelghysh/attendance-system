@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -245,11 +245,13 @@ class _HomePageState extends State<HomePage> {
         stream: db
             .collection('attendance')
             .where('employeeId', isEqualTo: uid)
-            .orderBy('serverTime', descending: true)
-            .limit(30)
             .snapshots(),
         builder: (c, s) {
-          final docs = s.data?.docs ?? [];
+          final docs = [...(s.data?.docs ?? [])];
+          DateTime tOf(QueryDocumentSnapshot<Map<String, dynamic>> d) =>
+              (d['serverTime'] as Timestamp?)?.toDate() ?? DateTime.now();
+          docs.sort((a, b) => tOf(b).compareTo(tOf(a)));
+          if (docs.length > 30) docs.removeRange(30, docs.length);
           final lastType = docs.isEmpty ? 'out' : docs.first['type'];
           final isIn = lastType == 'in';
           return Column(children: [
@@ -295,7 +297,7 @@ class _HomePageState extends State<HomePage> {
                   subtitle: Text(d['siteName'] ?? ''),
                   trailing: Text(t == null
                       ? '...'
-                      : DateFormat('yyyy/MM/dd  HH:mm').format(t.toLocal())),
+                      : intl.DateFormat('yyyy/MM/dd  HH:mm').format(t.toLocal())),
                 );
               }).toList()),
             ),
