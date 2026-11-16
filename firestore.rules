@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function staff() {
+      return signedIn() &&
+        exists(/databases/$(db)/documents/admins/$(request.auth.uid));
+    }
+    function admin() {
+      return staff() &&
+        get(/databases/$(db)/documents/admins/$(request.auth.uid)).data.role == 'admin';
+    }
+    function emp(uid) {
+      return get(/databases/$(db)/documents/employees/$(uid)).data;
+    }
+
+    // أدمن / مكتب: يُنشأ يدويًا من لوحة Firebase فقط
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /employees/{id} {
+      allow read: if staff() || (signedIn() && request.auth.uid == id);
+      allow create, delete: if admin();
+      // العامل يربط جهازه أول مرة فقط (deviceId فاضي)
+      allow update: if admin() || (
+        signedIn() && request.auth.uid == id &&
+        resource.data.deviceId == '' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deviceId'])
+      );
+    }
+
+    match /sites/{id} {
+      allow read: if signedIn();
+      allow write: if admin();
+    }
+
+    match /attendance/{id} {
+      allow read: if staff() ||
+        (signedIn() && resource.data.employeeId == request.auth.uid);
+      // وقت السيرفر إجباري + الموظف مفعّل + الجهاز هو المربوط
+      allow create: if admin() || (
+        signedIn() &&
+        request.resource.data.employeeId == request.auth.uid &&
+        request.resource.data.serverTime == request.time &&
+        request.resource.data.type in ['in', 'out'] &&
+        emp(request.auth.uid).active == true &&
+        emp(request.auth.uid).deviceId == request.resource.data.deviceId
+      );
+      allow update, delete: if admin();
+    }
+  }
+}

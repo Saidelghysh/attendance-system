@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة الحضور والانصراف</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;margin:0;background:#f3f5f7;color:#222}
+  header{background:#00796b;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+  nav{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px;background:#fff;border-bottom:1px solid #ddd}
+  nav button{border:0;background:#eceff1;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:15px}
+  nav button.on{background:#00796b;color:#fff}
+  main{padding:20px;max-width:1200px;margin:auto}
+  .card{background:#fff;border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px #0001}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:right}
+  th{background:#fafafa}
+  input,select{padding:8px;border:1px solid #bbb;border-radius:6px;font-size:14px;margin:3px}
+  button.b{background:#00796b;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;margin:3px}
+  button.r{background:#c62828}
+  button.g{background:#546e7a}
+  .tag{padding:2px 8px;border-radius:10px;font-size:12px;color:#fff}
+  .in{background:#2e7d32}.out{background:#ef6c00}.abs{background:#b71c1c}
+  .warn{color:#b71c1c;font-weight:bold}
+  .grid{display:flex;gap:12px;flex-wrap:wrap}
+  .stat{flex:1;min-width:120px;text-align:center;font-size:28px;font-weight:bold}
+  .stat small{display:block;font-size:13px;font-weight:normal;color:#666}
+  .hide{display:none}
+  #login{max-width:340px;margin:80px auto}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<div id="login" class="card">
+  <h3>تسجيل دخول المكتب</h3>
+  <input id="le" type="email" placeholder="الإيميل" style="width:100%">
+  <input id="lp" type="password" placeholder="الرقم السري" style="width:100%">
+  <button class="b" style="width:100%" onclick="doLogin()">دخول</button>
+  <div id="lerr" class="warn"></div>
+</div>
+
+<div id="app" class="hide">
+  <header><b>لوحة الحضور والانصراف</b><span><span id="who"></span> <button class="b g" onclick="auth.signOut()">خروج</button></span></header>
+  <nav id="tabs"></nav>
+  <main>
+    <section id="t-live"></section>
+    <section id="t-emps" class="hide"></section>
+    <section id="t-sites" class="hide"></section>
+    <section id="t-report" class="hide"></section>
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth(), db = firebase.firestore();
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtT = d => d ? d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '...';
+const fmtDT = d => d ? d.toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}) : '...';
+let role = null, employees = [], sites = [], unsubs = [], todayRecs = [];
+
+function doLogin(){
+  $('lerr').textContent='';
+  auth.signInWithEmailAndPassword($('le').value.trim(), $('lp').value)
+    .catch(()=>$('lerr').textContent='بيانات الدخول غير صحيحة');
+}
+
+auth.onAuthStateChanged(async u => {
+  unsubs.forEach(f=>f()); unsubs=[];
+  if(!u){ $('login').classList.remove('hide'); $('app').classList.add('hide'); return; }
+  const a = await db.collection('admins').doc(u.uid).get();
+  if(!a.exists){ $('lerr').textContent='هذا الحساب ليس من المكتب'; auth.signOut(); return; }
+  role = a.data().role;
+  $('login').classList.add('hide'); $('app').classList.remove('hide');
+  $('who').textContent = u.email + (role==='admin' ? ' (مدير)' : ' (مكتب)');
+  buildTabs(); start();
+});
+
+function buildTabs(){
+  const t = [['live','الحضور اللحظي'],['report','التقارير']];
+  if(role==='admin'){ t.splice(1,0,['emps','العمال والموظفين'],['sites','المواقع']); }
+  $('tabs').innerHTML = t.map(([k,n])=>`<button data-k="${k}" onclick="show('${k}')">${n}</button>`).join('');
+  show('live');
+}
+function show(k){
+  ['live','emps','sites','report'].forEach(x=>$('t-'+x).classList.toggle('hide',x!==k));
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+}
+
+function start(){
+  unsubs.push(db.collection('employees').onSnapshot(s=>{
+    employees = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    renderLive(); renderEmps(); renderReportFilter();
+  }));
+  unsubs.push(db.collection('sites').onSnapshot(s=>{
+    sites = s.docs.map(d=>({id:d.id,...d.data()}));
+    renderSites(); renderEmps();
+  }));
+  const t0 = new Date(); t0.setHours(0,0,0,0);
+  unsubs.push(db.collection('attendance').where('serverTime','>=',t0).orderBy('serverTime','desc')
+    .onSnapshot(s=>{ todayRecs = s.docs.map(d=>({id:d.id,...d.data()})); renderLive(); }));
+  renderReport();
+}
+
+/* ---------- الحضور اللحظي ---------- */
+function renderLive(){
+  const act = employees.filter(e=>e.active);
+  const last = {};
+  todayRecs.forEach(r=>{ if(!last[r.employeeId]) last[r.employeeId]=r; });
+  const inN = act.filter(e=>last[e.id]?.type==='in').length;
+  const outN = act.filter(e=>last[e.id]?.type==='out').length;
+  const absN = act.length - inN - outN;
+  const rows = act.map(e=>{
+    const r = last[e.id];
+    const st = !r ? '<span class="tag abs">لم يحضر</span>' : r.type==='in' ? '<span class="tag in">حاضر</span>' : '<span class="tag out">انصرف</span>';
+    const flag = r && r.source==='app' && !r.verified ? ' <span class="warn" title="بدون بصمة">⚠</span>' : '';
+    return `<tr><td>${esc(e.name)}</td><td>${esc(e.code)}</td><td>${esc(e.kind==='office'?'مكتب':'عامل')}</td><td>${st}${flag}</td>
+      <td>${esc(r?.siteName||'-')}</td><td>${fmtT(r?.serverTime?.toDate())}</td></tr>`;
+  }).join('');
+  $('t-live').innerHTML = `
+    <div class="grid">
+      <div class="card stat">${inN}<small>حاضر الآن</small></div>
+      <div class="card stat">${outN}<small>انصرف</small></div>
+      <div class="card stat">${absN}<small>لم يحضر بعد</small></div>
+    </div>
+    <div class="card scroll"><table><tr><th>الاسم</th><th>الكود</th><th>النوع</th><th>الحالة</th><th>الموقع</th><th>آخر تسجيل</th></tr>${rows}</table></div>
+    ${role==='admin'?manualForm():''}`;
+}
+function manualForm(){
+  const opts = employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  const sopts = sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  return `<div class="card"><b>تسجيل يدوي (لعامل نسي)</b><br>
+    <select id="m-emp">${opts}</select>
+    <select id="m-type"><option value="in">حضور</option><option value="out">انصراف</option></select>
+    <select id="m-site">${sopts}</select>
+    <input id="m-dt" type="datetime-local">
+    <button class="b" onclick="addManual()">حفظ</button></div>`;
+}
+async function addManual(){
+  const id=$('m-emp').value, dt=$('m-dt').value;
+  if(!id||!dt) return alert('اختر الموظف والوقت');
+  const e = employees.find(x=>x.id===id);
+  const s = sites.find(x=>x.id===$('m-site').value);
+  await db.collection('attendance').add({
+    employeeId:id, employeeName:e.name, type:$('m-type').value,
+    serverTime: firebase.firestore.Timestamp.fromDate(new Date(dt)),
+    siteId:s?.id||'', siteName:s?.name||'', verified:false, source:'manual',
+    addedBy: auth.currentUser.email, deviceId:''
+  });
+  alert('تم الحفظ');
+}
+
+/* ---------- العمال والموظفين ---------- */
+function renderEmps(){
+  if(role!=='admin') return;
+  const sopts = sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  const rows = employees.map(e=>`<tr>
+    <td>${esc(e.name)}</td><td>${esc(e.code)}</td><td>${e.kind==='office'?'مكتب':'عامل'}</td>
+    <td>${(e.sites||[]).map(id=>esc(sites.find(s=>s.id===id)?.name||'?')).join('، ')}</td>
+    <td>${e.deviceId?'مربوط':'غير مربوط'}</td>
+    <td>${e.active?'مفعّل':'<span class="warn">موقوف</span>'}</td>
+    <td>
+      <button class="b g" onclick="toggleActive('${e.id}',${!e.active})">${e.active?'إيقاف':'تفعيل'}</button>
+      <button class="b g" onclick="resetDevice('${e.id}')">فك ربط الجهاز</button>
+      <button class="b g" onclick="editSites('${e.id}')">المواقع</button>
+    </td></tr>`).join('');
+  $('t-emps').innerHTML = `
+    <div class="card"><b>إضافة عامل / موظف</b><br>
+      <input id="n-name" placeholder="الاسم"><input id="n-code" placeholder="الكود (حروف/أرقام إنجليزي)">
+      <input id="n-pass" placeholder="رقم سري (6 أحرف+)"><input id="n-phone" placeholder="الموبايل">
+      <select id="n-kind"><option value="worker">عامل</option><option value="office">موظف مكتب</option></select>
+      <select id="n-sites" multiple size="3" title="اضغط Ctrl لاختيار أكثر من موقع">${sopts}</select>
+      <button class="b" onclick="addEmp()">إضافة</button><div id="n-msg"></div></div>
+    <div class="card scroll"><table><tr><th>الاسم</th><th>الكود</th><th>النوع</th><th>المواقع</th><th>الجهاز</th><th>الحالة</th><th></th></tr>${rows}</table></div>`;
+}
+let secondary;
+async function addEmp(){
+  const name=$('n-name').value.trim(), code=$('n-code').value.trim().toLowerCase(), pass=$('n-pass').value;
+  if(!name||!code||pass.length<6) return alert('أكمل الاسم والكود ورقم سري 6 أحرف على الأقل');
+  if(!/^[a-z0-9._-]+$/.test(code)) return alert('الكود: حروف إنجليزية وأرقام فقط');
+  if(employees.some(e=>e.code===code)) return alert('الكود مستخدم');
+  try{
+    secondary = secondary || firebase.initializeApp(FIREBASE_CONFIG,'secondary');
+    const cred = await secondary.auth().createUserWithEmailAndPassword(`${code}@${EMAIL_DOMAIN}`, pass);
+    await secondary.auth().signOut();
+    await db.collection('employees').doc(cred.user.uid).set({
+      name, code, phone:$('n-phone').value.trim(), kind:$('n-kind').value,
+      sites:[...$('n-sites').selectedOptions].map(o=>o.value),
+      deviceId:'', active:true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    $('n-msg').textContent='تمت الإضافة ✅';
+    ['n-name','n-code','n-pass','n-phone'].forEach(i=>$(i).value='');
+  }catch(e){ alert('خطأ: '+e.message); }
+}
+const toggleActive=(id,v)=>db.collection('employees').doc(id).update({active:v});
+const resetDevice=id=>confirm('فك ربط الجهاز؟ العامل يربط موبايله الجديد عند أول دخول')&&db.collection('employees').doc(id).update({deviceId:''});
+function editSites(id){
+  const e=employees.find(x=>x.id===id);
+  const list = sites.map((s,i)=>`${i+1}- ${s.name}`).join('\n');
+  const v = prompt(`اكتب أرقام المواقع مفصولة بفاصلة:\n${list}`, (e.sites||[]).map(x=>sites.findIndex(s=>s.id===x)+1).join(','));
+  if(v===null) return;
+  const ids = v.split(',').map(n=>sites[parseInt(n)-1]?.id).filter(Boolean);
+  db.collection('employees').doc(id).update({sites:ids});
+}
+
+/* ---------- المواقع ---------- */
+function renderSites(){
+  if(role!=='admin') return;
+  const rows = sites.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.lat}, ${s.lng}</td><td>${s.radius} م</td>
+    <td><button class="b r" onclick="delSite('${s.id}')">حذف</button></td></tr>`).join('');
+  $('t-sites').innerHTML = `
+    <div class="card"><b>إضافة موقع عمل</b> <small>(من Google Maps: اضغط مطولًا على المكان وانسخ الإحداثيات)</small><br>
+      <input id="s-name" placeholder="اسم الموقع"><input id="s-lat" placeholder="خط العرض lat"><input id="s-lng" placeholder="خط الطول lng">
+      <input id="s-rad" type="number" value="100" style="width:90px"> متر
+      <button class="b" onclick="addSite()">إضافة</button></div>
+    <div class="card scroll"><table><tr><th>الاسم</th><th>الإحداثيات</th><th>النطاق</th><th></th></tr>${rows}</table></div>`;
+}
+async function addSite(){
+  const lat=parseFloat($('s-lat').value), lng=parseFloat($('s-lng').value), radius=parseInt($('s-rad').value);
+  if(!$('s-name').value.trim()||isNaN(lat)||isNaN(lng)) return alert('أكمل البيانات');
+  await db.collection('sites').add({name:$('s-name').value.trim(),lat,lng,radius:radius||100});
+}
+const delSite=id=>confirm('حذف الموقع؟')&&db.collection('sites').doc(id).delete();
+
+/* ---------- التقارير ---------- */
+function renderReportFilter(){
+  const sel=$('r-emp'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">كل الموظفين</option>'+employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  sel.value=cur;
+}
+function renderReport(){
+  const today=new Date().toISOString().slice(0,10);
+  const m1=today.slice(0,8)+'01';
+  $('t-report').innerHTML=`<div class="card">
+    من <input id="r-from" type="date" value="${m1}"> إلى <input id="r-to" type="date" value="${today}">
+    <select id="r-emp"></select>
+    <button class="b" onclick="runReport()">عرض</button>
+    <button class="b g" onclick="exportCsv()">تصدير Excel (CSV)</button></div>
+    <div id="r-out"></div>`;
+  renderReportFilter();
+}
+let reportRows=[];
+async function runReport(){
+  const from=new Date($('r-from').value+'T00:00:00'), to=new Date($('r-to').value+'T23:59:59');
+  const s=await db.collection('attendance').where('serverTime','>=',from).where('serverTime','<=',to).orderBy('serverTime').get();
+  const emp=$('r-emp').value;
+  const recs=s.docs.map(d=>({id:d.id,...d.data()})).filter(r=>!emp||r.employeeId===emp);
+  // حساب الساعات: نزاوج كل حضور بالانصراف التالي له
+  const by={};
+  recs.forEach(r=>{ (by[r.employeeId]=by[r.employeeId]||[]).push(r); });
+  reportRows=[];
+  Object.values(by).forEach(list=>{
+    const days={};
+    let open=null;
+    list.forEach(r=>{
+      const t=r.serverTime.toDate();
+      if(r.type==='in'){ open=r; }
+      else if(open){
+        const ti=open.serverTime.toDate();
+        const key=ti.toLocaleDateString('en-CA');
+        const d=days[key]=days[key]||{emp:r.employeeName,date:key,first:ti,last:t,ms:0,site:open.siteName};
+        d.ms+=t-ti; d.last=t; open=null;
+      }
+    });
+    Object.values(days).forEach(d=>reportRows.push(d));
+  });
+  reportRows.sort((a,b)=>a.date.localeCompare(b.date)||a.emp.localeCompare(b.emp));
+  const total={};
+  reportRows.forEach(d=>total[d.emp]=(total[d.emp]||0)+d.ms);
+  const h=ms=>(ms/3600000).toFixed(2);
+  $('r-out').innerHTML=`<div class="card scroll"><b>ملخص الساعات</b><table><tr><th>الاسم</th><th>إجمالي الساعات</th></tr>
+    ${Object.entries(total).map(([n,ms])=>`<tr><td>${esc(n)}</td><td>${h(ms)}</td></tr>`).join('')}</table></div>
+    <div class="card scroll"><b>التفاصيل اليومية</b><table><tr><th>الاسم</th><th>التاريخ</th><th>الموقع</th><th>حضور</th><th>انصراف</th><th>الساعات</th></tr>
+    ${reportRows.map(d=>`<tr><td>${esc(d.emp)}</td><td>${d.date}</td><td>${esc(d.site)}</td><td>${fmtT(d.first)}</td><td>${fmtT(d.last)}</td><td>${h(d.ms)}</td></tr>`).join('')}</table></div>`;
+}
+function exportCsv(){
+  if(!reportRows.length) return alert('اعرض التقرير أولًا');
+  const lines=['الاسم,التاريخ,الموقع,حضور,انصراف,الساعات',
+    ...reportRows.map(d=>[d.emp,d.date,d.site,fmtT(d.first),fmtT(d.last),(d.ms/3600000).toFixed(2)].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))];
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='attendance-report.csv'; a.click();
+}
+</script>
+</body>
+</html>
