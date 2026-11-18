@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:local_auth/local_auth.dart';
@@ -415,6 +416,42 @@ class App extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// تحويل الإحداثيات لعنوان مقروء (OpenStreetMap) بدون أي مكتبة إضافية
+Future<String> reverseGeocode(double lat, double lng) async {
+  final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
+  try {
+    final uri = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=ar&lat=$lat&lon=$lng',
+    );
+    final req = await client.getUrl(uri);
+    req.headers.set('User-Agent', 'AttendanceApp/1.0');
+    final res = await req.close().timeout(const Duration(seconds: 8));
+    if (res.statusCode != 200) return '';
+    final body = await res.transform(utf8.decoder).join();
+    final j = jsonDecode(body) as Map<String, dynamic>;
+    final a = (j['address'] as Map?)?.cast<String, dynamic>() ?? {};
+    final parts = <String>[];
+    for (final k in [
+      'road',
+      'neighbourhood',
+      'suburb',
+      'city',
+      'town',
+      'village',
+    ]) {
+      final v = '${a[k] ?? ''}'.trim();
+      if (v.isNotEmpty && !parts.contains(v)) parts.add(v);
+      if (parts.length >= 3) break;
+    }
+    if (parts.isNotEmpty) return parts.join('، ');
+    return '${j['display_name'] ?? ''}'.trim();
+  } catch (_) {
+    return '';
+  } finally {
+    client.close();
+  }
 }
 
 /// ---------------- شاشة الدخول ----------------
@@ -1013,23 +1050,7 @@ class _HomePageState extends State<HomePage> {
       }
 
       // العنوان بالاسم (شارع / منطقة / مدينة) من الإحداثيات
-      String address = '';
-      try {
-        await setLocaleIdentifier('ar');
-        final pm = await placemarkFromCoordinates(
-          pos.latitude,
-          pos.longitude,
-        ).timeout(const Duration(seconds: 6));
-        if (pm.isNotEmpty) {
-          final p = pm.first;
-          final parts = <String>[];
-          for (final v in [p.street, p.subLocality, p.locality]) {
-            final t = (v ?? '').trim();
-            if (t.isNotEmpty && !parts.contains(t)) parts.add(t);
-          }
-          address = parts.join('، ');
-        }
-      } catch (_) {}
+      String address = await reverseGeocode(pos.latitude, pos.longitude);
 
       // تحديد المكان تلقائيًا: أقرب موقع معروف، وإلا يتسجل موقع جديد
       final siteSnap = await db.collection('sites').get();
