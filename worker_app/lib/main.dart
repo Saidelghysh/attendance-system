@@ -22,63 +22,63 @@ const _langNames = {'ar': 'العربية', 'en': 'English', 'hi': 'हिन्
 
 const Map<String, Map<String, String>> _tr = {
   'ar': {
-    'app_title': t('app_title'),
-    'login_sub': t('login_sub'),
-    'emp_code': t('emp_code'),
-    'password': t('password'),
-    'login': t('login'),
-    'bio_login': t('bio_title'),
-    'bio_title': t('bio_title'),
-    'need_creds': t('need_creds'),
-    'bio_login_reason': t('bio_login_reason'),
-    'unlock_reason': t('unlock_reason'),
-    'locked': t('locked'),
-    'unlock': t('unlock'),
-    'logout': t('logout'),
-    'err_network': t('err_network'),
-    'err_many': t('err_many'),
-    'err_disabled': t('err_disabled'),
-    'err_config': t('err_config'),
-    'err_creds': t('err_creds'),
-    'err_login': t('err_login'),
-    'fatal_none': t('fatal_none'),
-    'fatal_inactive': t('fatal_inactive'),
-    'fatal_device': t('fatal_device'),
-    'fatal_load': t('fatal_load'),
-    'bio_ask': t('bio_ask'),
-    'later': t('later'),
-    'enable': t('enable'),
-    'bio_unsupported': t('bio_unsupported'),
-    'bio_confirm_reason': t('bio_confirm_reason'),
-    'not_enabled': t('not_enabled'),
-    'bio_enabled': t('bio_enabled'),
-    'confirm_pw': t('confirm_pw'),
-    'cancel': t('cancel'),
-    'continue': t('continue'),
-    'wrong_pw': t('wrong_pw'),
-    'bio_sub': t('bio_sub'),
-    'bio_disabled': t('bio_disabled'),
-    'loc_permission': t('loc_permission'),
-    'gps_on': t('gps_on'),
-    'mock_loc': t('mock_loc'),
-    'reason_in': t('reason_in'),
-    'reason_out': t('reason_out'),
-    'bio_failed': t('bio_failed'),
-    'done_in': t('done_in'),
-    'done_out': t('done_out'),
-    'generic_err': t('generic_err'),
-    'welcome': t('welcome'),
-    'present_since': t('present_since'),
-    'not_in': t('not_in'),
-    'btn_out': t('btn_out'),
-    'btn_in': t('btn_in'),
-    'in': t('in'),
-    'out': t('out'),
-    'first_in': t('first_in'),
-    'last_out': t('last_out'),
-    'hours_today': t('hours_today'),
-    'history': t('history'),
-    'no_records': t('no_records'),
+    'app_title': 'الحضور والانصراف',
+    'login_sub': 'سجّل دخولك للمتابعة',
+    'emp_code': 'كود الموظف',
+    'password': 'الرقم السري',
+    'login': 'دخول',
+    'bio_login': 'الدخول بالبصمة',
+    'bio_title': 'الدخول بالبصمة',
+    'need_creds': 'اكتب كود الموظف والرقم السري',
+    'bio_login_reason': 'سجّل دخولك بالبصمة',
+    'unlock_reason': 'افتح التطبيق بالبصمة',
+    'locked': 'التطبيق مقفل',
+    'unlock': 'فتح بالبصمة',
+    'logout': 'تسجيل خروج',
+    'err_network': 'تعذر الاتصال، تأكد من الإنترنت',
+    'err_many': 'محاولات كثيرة، حاول بعد قليل',
+    'err_disabled': 'الحساب موقوف، راجع المكتب',
+    'err_config': 'إعدادات التطبيق غير مكتملة، راجع المكتب',
+    'err_creds': 'الكود أو الرقم السري غير صحيح',
+    'err_login': 'تعذر تسجيل الدخول، حاول مرة أخرى',
+    'fatal_none': 'حسابك غير مسجل. راجع المكتب.',
+    'fatal_inactive': 'حسابك موقوف. راجع المكتب.',
+    'fatal_device': 'حسابك مربوط بموبايل آخر. راجع المكتب لفك الربط.',
+    'fatal_load': 'تعذر تحميل البيانات، تأكد من الإنترنت',
+    'bio_ask': 'تحب تفعّل الدخول بالبصمة بدل كتابة الرقم السري كل مرة؟',
+    'later': 'لاحقًا',
+    'enable': 'تفعيل',
+    'bio_unsupported': 'الجهاز لا يدعم البصمة',
+    'bio_confirm_reason': 'تأكيد تفعيل الدخول بالبصمة',
+    'not_enabled': 'لم يتم التفعيل',
+    'bio_enabled': 'تم تفعيل الدخول بالبصمة ✅',
+    'confirm_pw': 'تأكيد الرقم السري',
+    'cancel': 'إلغاء',
+    'continue': 'متابعة',
+    'wrong_pw': 'الرقم السري غير صحيح',
+    'bio_sub': 'فتح التطبيق وتسجيل الدخول بالبصمة',
+    'bio_disabled': 'تم إيقاف الدخول بالبصمة',
+    'loc_permission': 'لازم تسمح بالوصول للموقع',
+    'gps_on': 'شغّل الـ GPS',
+    'mock_loc': 'تم رفض التسجيل: موقع وهمي',
+    'reason_in': 'تأكيد الحضور',
+    'reason_out': 'تأكيد الانصراف',
+    'bio_failed': 'فشل التحقق بالبصمة',
+    'done_in': 'تم تسجيل الحضور ✅',
+    'done_out': 'تم تسجيل الانصراف ✅',
+    'generic_err': 'حدث خطأ، حاول مرة أخرى',
+    'welcome': 'مرحبًا',
+    'present_since': 'حاضر منذ',
+    'not_in': 'لم تسجّل حضور بعد',
+    'btn_out': 'تسجيل انصراف',
+    'btn_in': 'تسجيل حضور',
+    'in': 'حضور',
+    'out': 'انصراف',
+    'first_in': 'أول حضور',
+    'last_out': 'آخر انصراف',
+    'hours_today': 'ساعات اليوم',
+    'history': 'السجل',
+    'no_records': 'لا توجد سجلات بعد',
     'hrs': 'س',
     'mins': 'د',
   },
@@ -1314,14 +1314,14 @@ class _HomePageState extends State<HomePage> {
           DateTime? openIn;
           var worked = Duration.zero;
           for (final d in today) {
-            final t = tOf(d);
+            final tm = tOf(d);
             if (d['type'] == 'in') {
-              firstIn ??= t;
-              openIn ??= t;
+              firstIn ??= tm;
+              openIn ??= tm;
             } else {
-              lastOut = t;
+              lastOut = tm;
               if (openIn != null) {
-                worked += t.difference(openIn);
+                worked += tm.difference(openIn);
                 openIn = null;
               }
             }
@@ -1332,15 +1332,15 @@ class _HomePageState extends State<HomePage> {
           final items = <Widget>[];
           String? lastDay;
           for (final d in docs) {
-            final t = tOf(d);
-            final dayKey = intl.DateFormat('yyyy-MM-dd').format(t);
+            final tm = tOf(d);
+            final dayKey = intl.DateFormat('yyyy-MM-dd').format(tm);
             if (dayKey != lastDay) {
               lastDay = dayKey;
               items.add(
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
                   child: Text(
-                    dayLabel(t),
+                    dayLabel(tm),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black54,
@@ -1375,7 +1375,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   subtitle: Text('${d['siteName'] ?? ''}'),
                   trailing: Text(
-                    hm(t),
+                    hm(tm),
                     textDirection: TextDirection.ltr,
                     style: const TextStyle(
                       fontSize: 16,
