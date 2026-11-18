@@ -1,8 +1,8 @@
 {
-  "apiKey": "PUT_API_KEY",
-  "projectId": "PUT_PROJECT_ID",
-  "webAppId": "PUT_WEB_APP_ID",
-  "androidAppId": "PUT_ANDROID_APP_ID",
-  "messagingSenderId": "PUT_SENDER_ID",
+  "apiKey": "AIzaSyDsHVUe1B3xjrjdmwLDiWZ-Wz0X9_Xy8RA",
+  "projectId": "attendance-system-e23f5",
+  "webAppId": "1:229689884137:web:f7377c76881a864ec69f78",
+  "androidAppId": "1:229689884137:android:2fb8eb081e2a3a61c69f78",
+  "messagingSenderId": "229689884137",
   "emailDomain": "attend.app"
 }

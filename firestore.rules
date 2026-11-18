@@ -18,7 +18,21 @@ service cloud.firestore {
     // أدمن / مكتب: يُنشأ يدويًا من لوحة Firebase فقط
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
-      allow write: if false;
+      // المدير يضيف مستخدمي اللوحة
+      allow create: if admin() && request.resource.data.role in ['office', 'admin'];
+      // إنشاء أول مدير مرة واحدة فقط (مع تسجيل meta/setup في نفس العملية)
+      allow create: if signedIn() && request.auth.uid == uid &&
+        !exists(/databases/$(db)/documents/meta/setup) &&
+        existsAfter(/databases/$(db)/documents/meta/setup) &&
+        request.resource.data.role == 'admin';
+      allow update, delete: if false;
+    }
+
+    match /meta/{id} {
+      allow read: if false;
+      allow create: if id == 'setup' && signedIn() &&
+        !exists(/databases/$(db)/documents/meta/setup) &&
+        existsAfter(/databases/$(db)/documents/admins/$(request.auth.uid));
     }
 
     match /employees/{id} {
