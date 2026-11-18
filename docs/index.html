@@ -4,41 +4,101 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة الحضور والانصراف</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+  :root{--p:#00796b;--p2:#004d40;--bg:#eef2f4;--tx:#1f2933;--mut:#6b7785}
   *{box-sizing:border-box}
-  body{font-family:Tahoma,Arial,sans-serif;margin:0;background:#f3f5f7;color:#222}
-  header{background:#00796b;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
-  nav{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px;background:#fff;border-bottom:1px solid #ddd}
-  nav button{border:0;background:#eceff1;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:15px}
-  nav button.on{background:#00796b;color:#fff}
-  main{padding:20px;max-width:1200px;margin:auto}
-  .card{background:#fff;border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px #0001}
+  body{font-family:Cairo,Tahoma,Arial,sans-serif;margin:0;background:var(--bg);color:var(--tx)}
+  header{background:linear-gradient(135deg,var(--p2),var(--p));color:#fff;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px #0003}
+  header b{font-size:18px}
+  nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 22px;background:#fff;border-bottom:1px solid #dde3e7}
+  nav button{border:0;background:#eceff1;padding:9px 18px;border-radius:20px;cursor:pointer;font:600 14px Cairo,Tahoma;color:var(--tx);transition:.15s}
+  nav button:hover{background:#dfe6e9}
+  nav button.on{background:var(--p);color:#fff}
+  main{padding:22px;max-width:1200px;margin:auto}
+  .card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0000000f}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:right}
-  th{background:#fafafa}
-  input,select{padding:8px;border:1px solid #bbb;border-radius:6px;font-size:14px;margin:3px}
-  button.b{background:#00796b;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;margin:3px}
+  th,td{padding:10px;border-bottom:1px solid #eef0f2;text-align:right}
+  th{background:#f6f8f9;color:var(--mut);font-weight:600}
+  tr:hover td{background:#fafcfc}
+  input,select{padding:9px 12px;border:1px solid #c8d0d6;border-radius:8px;font:14px Cairo,Tahoma;margin:3px;background:#fff}
+  input:focus,select:focus{outline:2px solid #00796b55;border-color:var(--p)}
+  button.b,.pbtn{background:var(--p);color:#fff;border:0;padding:9px 16px;border-radius:8px;cursor:pointer;margin:3px;font:600 14px Cairo,Tahoma;transition:.15s}
+  button.b:hover,.pbtn:hover{background:var(--p2)}
   button.r{background:#c62828}
   button.g{background:#546e7a}
-  .tag{padding:2px 8px;border-radius:10px;font-size:12px;color:#fff}
+  .tag{padding:3px 10px;border-radius:12px;font-size:12px;color:#fff}
   .in{background:#2e7d32}.out{background:#ef6c00}.abs{background:#b71c1c}
   .warn{color:#b71c1c;font-weight:bold}
-  .grid{display:flex;gap:12px;flex-wrap:wrap}
-  .stat{flex:1;min-width:120px;text-align:center;font-size:28px;font-weight:bold}
-  .stat small{display:block;font-size:13px;font-weight:normal;color:#666}
-  .hide{display:none}
-  #login{max-width:340px;margin:80px auto}
+  .grid{display:flex;gap:14px;flex-wrap:wrap}
+  .stat{flex:1;min-width:130px;text-align:center;font-size:32px;font-weight:700;color:var(--p)}
+  .stat small{display:block;font-size:13px;font-weight:400;color:var(--mut)}
+  .hide{display:none!important}
   .scroll{overflow-x:auto}
+
+  /* ---------- صفحة الدخول ---------- */
+  .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:radial-gradient(circle at 20% 20%,#26a69a55,transparent 45%),radial-gradient(circle at 85% 80%,#00695c66,transparent 45%),linear-gradient(135deg,#004d40,#00897b)}
+  .auth-card{width:100%;max-width:400px;background:#fff;border-radius:20px;padding:32px 28px;box-shadow:0 20px 50px #0004;text-align:center}
+  .logo{width:72px;height:72px;margin:-70px auto 12px;border-radius:50%;background:linear-gradient(135deg,#00897b,#004d40);display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 8px 20px #0003;border:4px solid #fff}
+  .auth-card{margin-top:40px}
+  .auth-card h2{margin:6px 0 2px;font-size:22px;color:var(--p2)}
+  .auth-card .sub{margin:0 0 18px;color:var(--mut);font-size:14px}
+  .auth-card label{display:block;text-align:right;font-size:13px;color:var(--mut);margin:10px 4px 0}
+  .auth-card input{width:100%;margin:4px 0}
+  .pw{position:relative}
+  .pw input{padding-left:40px}
+  .eye{position:absolute;left:8px;top:8px;border:0;background:none;cursor:pointer;font-size:18px}
+  .pbtn.big{width:100%;padding:12px;font-size:16px;margin:16px 0 6px}
+  .links{display:flex;justify-content:space-between;font-size:13px;margin-top:6px}
+  .links a,.auth-card a{color:var(--p);text-decoration:none}
+  .links a:hover{text-decoration:underline}
+  .lmsg{margin-top:14px;font-size:14px;min-height:0;border-radius:8px}
+  .lmsg.bad{background:#ffebee;color:#b71c1c;padding:10px}
+  .lmsg.ok{background:#e8f5e9;color:#1b5e20;padding:10px}
+  .note{font-size:13px;color:var(--mut);margin:6px 0}
 </style>
 </head>
 <body>
-<div id="login" class="card">
-  <h3>تسجيل دخول المكتب</h3>
-  <input id="le" type="email" placeholder="الإيميل" style="width:100%">
-  <input id="lp" type="password" placeholder="الرقم السري" style="width:100%">
-  <button class="b" style="width:100%" onclick="doLogin()">دخول</button>
-  <div id="lerr" class="warn"></div>
-  <p><a href="#" onclick="showSetup();return false">أول مرة؟ إنشاء حساب المدير</a></p>
+<div id="login" class="auth-wrap">
+  <div class="auth-card">
+    <div class="logo">🕒</div>
+    <h2>نظام الحضور والانصراف</h2>
+    <p class="sub">لوحة تحكم المكتب</p>
+
+    <div id="v-login">
+      <label>الإيميل</label>
+      <input id="le" type="email" autocomplete="username" placeholder="name@example.com" dir="ltr">
+      <label>الرقم السري</label>
+      <div class="pw"><input id="lp" type="password" autocomplete="current-password" dir="ltr"><button type="button" class="eye" onclick="togglePw()">👁</button></div>
+      <button class="pbtn big" onclick="doLogin()">دخول</button>
+      <div class="links"><a href="#" onclick="view('reset');return false">نسيت الرقم السري؟</a><a href="#" onclick="view('setup');return false">أول مرة؟ إنشاء المدير</a></div>
+    </div>
+
+    <div id="v-reset" class="hide">
+      <p class="note">اكتب إيميلك وهنبعتلك رابط لتغيير الرقم السري.</p>
+      <input id="re" type="email" placeholder="الإيميل" dir="ltr">
+      <button class="pbtn big" onclick="doReset()">إرسال الرابط</button>
+      <div class="links"><a href="#" onclick="view('login');return false">← رجوع للدخول</a></div>
+    </div>
+
+    <div id="v-setup" class="hide">
+      <p class="note">إنشاء حساب المدير يتم مرة واحدة فقط.</p>
+      <input id="se" type="email" placeholder="الإيميل" dir="ltr">
+      <input id="sp" type="password" placeholder="رقم سري (6 أحرف+)" dir="ltr">
+      <button class="pbtn big" onclick="doSetup()">إنشاء</button>
+      <div class="links"><a href="#" onclick="view('login');return false">← رجوع للدخول</a></div>
+    </div>
+
+    <div id="v-claim" class="hide">
+      <p class="note">الحساب <b id="claim-email" dir="ltr"></b> غير مسجل كمدير.<br>لو ده أول حساب مدير لسه ما اتفعّلش، اضغط تفعيل.</p>
+      <button class="pbtn big" onclick="claimAdmin()">تفعيل هذا الحساب كمدير</button>
+      <div class="links"><a href="#" onclick="auth.signOut();view('login');return false">تسجيل خروج</a></div>
+    </div>
+
+    <div id="lmsg" class="lmsg"></div>
+  </div>
 </div>
 
 <div id="app" class="hide">
@@ -80,10 +140,47 @@ const fmtT = d => d ? d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-dig
 const fmtDT = d => d ? d.toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}) : '...';
 let role = null, employees = [], sites = [], unsubs = [], todayRecs = [];
 
-function doLogin(){
-  $('lerr').textContent='';
-  auth.signInWithEmailAndPassword($('le').value.trim(), $('lp').value)
-    .catch(()=>$('lerr').textContent='بيانات الدخول غير صحيحة');
+const ERR={
+ 'auth/invalid-credential':'الإيميل أو الرقم السري غير صحيح',
+ 'auth/wrong-password':'الرقم السري غير صحيح',
+ 'auth/user-not-found':'هذا الإيميل غير مسجل',
+ 'auth/invalid-email':'صيغة الإيميل غير صحيحة',
+ 'auth/missing-password':'اكتب الرقم السري',
+ 'auth/weak-password':'الرقم السري ضعيف (6 أحرف على الأقل)',
+ 'auth/email-already-in-use':'هذا الإيميل مسجل بالفعل. سجّل دخول أو استخدم "نسيت الرقم السري"',
+ 'auth/operation-not-allowed':'الدخول بالإيميل غير مفعّل في Firebase (Authentication ← Sign-in method ← Email/Password)',
+ 'auth/too-many-requests':'محاولات كثيرة، انتظر قليلًا ثم حاول',
+ 'auth/network-request-failed':'تعذر الاتصال بالإنترنت',
+ 'auth/invalid-api-key':'مفتاح Firebase غير صحيح في firebase-config.json',
+ 'permission-denied':'قواعد Firestore غير منشورة أو لا تسمح بهذه العملية'
+};
+const errText=e=>ERR[e.code]||('خطأ: '+(e.code||'')+' '+(e.message||''));
+function msg(t,ok){const m=$('lmsg');m.textContent=t||'';m.className='lmsg'+(t?(ok?' ok':' bad'):'');}
+function view(n){['login','reset','setup','claim'].forEach(v=>$('v-'+v).classList.toggle('hide',v!==n));msg('');}
+function togglePw(){const i=$('lp');i.type=i.type==='password'?'text':'password';}
+function busy(x){document.querySelectorAll('.pbtn').forEach(b=>b.disabled=x);}
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||$('login').classList.contains('hide')) return;
+  if(!$('v-login').classList.contains('hide')) doLogin();
+  else if(!$('v-reset').classList.contains('hide')) doReset();
+  else if(!$('v-setup').classList.contains('hide')) doSetup();
+});
+
+async function doLogin(){
+  const em=$('le').value.trim(), pw=$('lp').value;
+  if(!em||!pw) return msg('اكتب الإيميل والرقم السري');
+  msg(''); busy(true);
+  try{ await auth.signInWithEmailAndPassword(em,pw); }
+  catch(e){ msg(errText(e)); }
+  busy(false);
+}
+async function doReset(){
+  const em=$('re').value.trim()||$('le').value.trim();
+  if(!em) return msg('اكتب الإيميل');
+  busy(true);
+  try{ await auth.sendPasswordResetEmail(em); msg('تم إرسال رابط تغيير الرقم السري على إيميلك (راجع Spam كمان)',true); }
+  catch(e){ msg(errText(e)); }
+  busy(false);
 }
 
 let settingUp=false;
@@ -91,21 +188,38 @@ auth.onAuthStateChanged(u=>{ if(!settingUp) handleUser(u); });
 async function handleUser(u){
   unsubs.forEach(f=>f()); unsubs=[];
   if(!u){ $('login').classList.remove('hide'); $('app').classList.add('hide'); return; }
-  const a = await db.collection('admins').doc(u.uid).get();
-  if(!a.exists){ $('lerr').textContent='هذا الحساب ليس من المكتب'; auth.signOut(); return; }
-  role = a.data().role;
+  let a;
+  try{ a=await db.collection('admins').doc(u.uid).get(); }
+  catch(e){
+    $('login').classList.remove('hide'); $('app').classList.add('hide');
+    view('login'); msg(errText(e)); await auth.signOut(); return;
+  }
+  if(!a.exists){
+    $('login').classList.remove('hide'); $('app').classList.add('hide');
+    $('claim-email').textContent=u.email; view('claim'); return;
+  }
+  role=a.data().role;
   $('login').classList.add('hide'); $('app').classList.remove('hide');
-  $('who').textContent = u.email + (role==='admin' ? ' (مدير)' : ' (مكتب)');
+  $('who').textContent=u.email+(role==='admin'?' (مدير)':' (مكتب)');
   buildTabs(); start();
 }
-
-function showSetup(){
-  $('login').innerHTML='<h3>إنشاء حساب المدير (مرة واحدة)</h3><input id="se" type="email" placeholder="الإيميل" style="width:100%"><input id="sp" type="password" placeholder="رقم سري (6 أحرف+)" style="width:100%"><button class="b" style="width:100%" onclick="doSetup()">إنشاء</button><div id="lerr" class="warn"></div>';
+async function claimAdmin(){
+  const u=auth.currentUser; if(!u) return;
+  busy(true);
+  try{
+    const b=db.batch();
+    b.set(db.collection('admins').doc(u.uid),{role:'admin'});
+    b.set(db.collection('meta').doc('setup'),{by:u.uid,at:firebase.firestore.FieldValue.serverTimestamp()});
+    await b.commit(); handleUser(u);
+  }catch(e){ msg('لا يمكن التفعيل: غالبًا تم تعيين مدير من قبل، أو القواعد غير منشورة. ('+errText(e)+')'); }
+  busy(false);
 }
 async function doSetup(){
-  settingUp=true;
+  const em=$('se').value.trim(), pw=$('sp').value;
+  if(!em||pw.length<6) return msg('اكتب الإيميل ورقم سري 6 أحرف على الأقل');
+  settingUp=true; busy(true);
   try{
-    const c=await auth.createUserWithEmailAndPassword($('se').value.trim(),$('sp').value);
+    const c=await auth.createUserWithEmailAndPassword(em,pw);
     const b=db.batch();
     b.set(db.collection('admins').doc(c.user.uid),{role:'admin'});
     b.set(db.collection('meta').doc('setup'),{by:c.user.uid,at:firebase.firestore.FieldValue.serverTimestamp()});
@@ -113,9 +227,10 @@ async function doSetup(){
     settingUp=false; handleUser(auth.currentUser);
   }catch(e){
     settingUp=false;
-    $('lerr').textContent='تعذر الإنشاء: '+e.message+' (ربما تم إنشاء المدير من قبل، سجّل دخول عادي)';
-    auth.signOut();
+    msg(errText(e)+' — لو الحساب اتعمل قبل كده سجّل دخول بيه.');
+    if(auth.currentUser) handleUser(auth.currentUser);
   }
+  busy(false);
 }
 
 function buildTabs(){
