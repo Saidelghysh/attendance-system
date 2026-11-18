@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:local_auth/local_auth.dart';
@@ -16,9 +17,264 @@ const kPrimary = Color(0xFF00796B);
 const kDark = Color(0xFF004D40);
 const kBg = Color(0xFFF2F5F7);
 
+final ValueNotifier<String> langNotifier = ValueNotifier<String>('ar');
+const _langNames = {'ar': 'العربية', 'en': 'English', 'hi': 'हिन्दी'};
+
+const Map<String, Map<String, String>> _tr = {
+  'ar': {
+    'app_title': t('app_title'),
+    'login_sub': t('login_sub'),
+    'emp_code': t('emp_code'),
+    'password': t('password'),
+    'login': t('login'),
+    'bio_login': t('bio_title'),
+    'bio_title': t('bio_title'),
+    'need_creds': t('need_creds'),
+    'bio_login_reason': t('bio_login_reason'),
+    'unlock_reason': t('unlock_reason'),
+    'locked': t('locked'),
+    'unlock': t('unlock'),
+    'logout': t('logout'),
+    'err_network': t('err_network'),
+    'err_many': t('err_many'),
+    'err_disabled': t('err_disabled'),
+    'err_config': t('err_config'),
+    'err_creds': t('err_creds'),
+    'err_login': t('err_login'),
+    'fatal_none': t('fatal_none'),
+    'fatal_inactive': t('fatal_inactive'),
+    'fatal_device': t('fatal_device'),
+    'fatal_load': t('fatal_load'),
+    'bio_ask': t('bio_ask'),
+    'later': t('later'),
+    'enable': t('enable'),
+    'bio_unsupported': t('bio_unsupported'),
+    'bio_confirm_reason': t('bio_confirm_reason'),
+    'not_enabled': t('not_enabled'),
+    'bio_enabled': t('bio_enabled'),
+    'confirm_pw': t('confirm_pw'),
+    'cancel': t('cancel'),
+    'continue': t('continue'),
+    'wrong_pw': t('wrong_pw'),
+    'bio_sub': t('bio_sub'),
+    'bio_disabled': t('bio_disabled'),
+    'loc_permission': t('loc_permission'),
+    'gps_on': t('gps_on'),
+    'mock_loc': t('mock_loc'),
+    'reason_in': t('reason_in'),
+    'reason_out': t('reason_out'),
+    'bio_failed': t('bio_failed'),
+    'done_in': t('done_in'),
+    'done_out': t('done_out'),
+    'generic_err': t('generic_err'),
+    'welcome': t('welcome'),
+    'present_since': t('present_since'),
+    'not_in': t('not_in'),
+    'btn_out': t('btn_out'),
+    'btn_in': t('btn_in'),
+    'in': t('in'),
+    'out': t('out'),
+    'first_in': t('first_in'),
+    'last_out': t('last_out'),
+    'hours_today': t('hours_today'),
+    'history': t('history'),
+    'no_records': t('no_records'),
+    'hrs': 'س',
+    'mins': 'د',
+  },
+  'en': {
+    'app_title': 'Attendance',
+    'login_sub': 'Sign in to continue',
+    'emp_code': 'Employee code',
+    'password': 'Password',
+    'login': 'Sign in',
+    'bio_login': 'Sign in with fingerprint',
+    'bio_title': 'Fingerprint sign-in',
+    'need_creds': 'Enter your employee code and password',
+    'bio_login_reason': 'Sign in with your fingerprint',
+    'unlock_reason': 'Unlock the app with your fingerprint',
+    'locked': 'App locked',
+    'unlock': 'Unlock',
+    'logout': 'Sign out',
+    'err_network': 'Connection failed. Check your internet.',
+    'err_many': 'Too many attempts. Try again shortly.',
+    'err_disabled': 'Account suspended. Contact the office.',
+    'err_config': 'App setup is incomplete. Contact the office.',
+    'err_creds': 'Wrong employee code or password',
+    'err_login': 'Could not sign in. Try again.',
+    'fatal_none': 'Your account is not registered. Contact the office.',
+    'fatal_inactive': 'Your account is suspended. Contact the office.',
+    'fatal_device':
+        'Your account is linked to another phone. Ask the office to unlink it.',
+    'fatal_load': 'Could not load data. Check your internet.',
+    'bio_ask':
+        'Enable fingerprint sign-in instead of typing your password each time?',
+    'later': 'Later',
+    'enable': 'Enable',
+    'bio_unsupported': 'This device does not support fingerprint',
+    'bio_confirm_reason': 'Confirm enabling fingerprint sign-in',
+    'not_enabled': 'Not enabled',
+    'bio_enabled': 'Fingerprint sign-in enabled ✅',
+    'confirm_pw': 'Confirm password',
+    'cancel': 'Cancel',
+    'continue': 'Continue',
+    'wrong_pw': 'Wrong password',
+    'bio_sub': 'Unlock the app and sign in with fingerprint',
+    'bio_disabled': 'Fingerprint sign-in turned off',
+    'loc_permission': 'Please allow location access',
+    'gps_on': 'Turn on GPS',
+    'mock_loc': 'Rejected: fake location detected',
+    'reason_in': 'Confirm check-in',
+    'reason_out': 'Confirm check-out',
+    'bio_failed': 'Fingerprint verification failed',
+    'done_in': 'Checked in ✅',
+    'done_out': 'Checked out ✅',
+    'generic_err': 'Something went wrong. Try again.',
+    'welcome': 'Welcome',
+    'present_since': 'Checked in since',
+    'not_in': 'You have not checked in yet',
+    'btn_out': 'Check out',
+    'btn_in': 'Check in',
+    'in': 'Check-in',
+    'out': 'Check-out',
+    'first_in': 'First check-in',
+    'last_out': 'Last check-out',
+    'hours_today': 'Hours today',
+    'history': 'History',
+    'no_records': 'No records yet',
+    'hrs': 'h',
+    'mins': 'm',
+  },
+  'hi': {
+    'app_title': 'उपस्थिति',
+    'login_sub': 'जारी रखने के लिए साइन इन करें',
+    'emp_code': 'कर्मचारी कोड',
+    'password': 'पासवर्ड',
+    'login': 'साइन इन',
+    'bio_login': 'फ़िंगरप्रिंट से साइन इन',
+    'bio_title': 'फ़िंगरप्रिंट साइन इन',
+    'need_creds': 'कर्मचारी कोड और पासवर्ड दर्ज करें',
+    'bio_login_reason': 'फ़िंगरप्रिंट से साइन इन करें',
+    'unlock_reason': 'फ़िंगरप्रिंट से ऐप खोलें',
+    'locked': 'ऐप लॉक है',
+    'unlock': 'अनलॉक करें',
+    'logout': 'साइन आउट',
+    'err_network': 'कनेक्शन विफल। इंटरनेट जाँचें।',
+    'err_many': 'बहुत अधिक प्रयास। थोड़ी देर बाद पुनः प्रयास करें।',
+    'err_disabled': 'खाता निलंबित है। कार्यालय से संपर्क करें।',
+    'err_config': 'ऐप सेटअप अधूरा है। कार्यालय से संपर्क करें।',
+    'err_creds': 'कर्मचारी कोड या पासवर्ड गलत है',
+    'err_login': 'साइन इन नहीं हो सका। पुनः प्रयास करें।',
+    'fatal_none': 'आपका खाता पंजीकृत नहीं है। कार्यालय से संपर्क करें।',
+    'fatal_inactive': 'आपका खाता निलंबित है। कार्यालय से संपर्क करें।',
+    'fatal_device': 'आपका खाता किसी अन्य फ़ोन से जुड़ा है। अनलिंक करने के लिए कार्यालय से कहें।',
+    'fatal_load': 'डेटा लोड नहीं हो सका। इंटरनेट जाँचें।',
+    'bio_ask': 'हर बार पासवर्ड डालने के बजाय फ़िंगरप्रिंट साइन इन चालू करें?',
+    'later': 'बाद में',
+    'enable': 'चालू करें',
+    'bio_unsupported': 'यह डिवाइस फ़िंगरप्रिंट का समर्थन नहीं करता',
+    'bio_confirm_reason': 'फ़िंगरप्रिंट साइन इन चालू करने की पुष्टि करें',
+    'not_enabled': 'चालू नहीं हुआ',
+    'bio_enabled': 'फ़िंगरप्रिंट साइन इन चालू हो गया ✅',
+    'confirm_pw': 'पासवर्ड की पुष्टि करें',
+    'cancel': 'रद्द करें',
+    'continue': 'जारी रखें',
+    'wrong_pw': 'पासवर्ड गलत है',
+    'bio_sub': 'फ़िंगरप्रिंट से ऐप खोलें और साइन इन करें',
+    'bio_disabled': 'फ़िंगरप्रिंट साइन इन बंद कर दिया गया',
+    'loc_permission': 'कृपया स्थान की अनुमति दें',
+    'gps_on': 'GPS चालू करें',
+    'mock_loc': 'अस्वीकृत: नकली लोकेशन मिली',
+    'reason_in': 'चेक-इन की पुष्टि करें',
+    'reason_out': 'चेक-आउट की पुष्टि करें',
+    'bio_failed': 'फ़िंगरप्रिंट सत्यापन विफल',
+    'done_in': 'चेक-इन हो गया ✅',
+    'done_out': 'चेक-आउट हो गया ✅',
+    'generic_err': 'कुछ गलत हुआ। पुनः प्रयास करें।',
+    'welcome': 'स्वागत है',
+    'present_since': 'चेक-इन समय',
+    'not_in': 'आपने अभी चेक-इन नहीं किया',
+    'btn_out': 'चेक-आउट',
+    'btn_in': 'चेक-इन',
+    'in': 'चेक-इन',
+    'out': 'चेक-आउट',
+    'first_in': 'पहला चेक-इन',
+    'last_out': 'अंतिम चेक-आउट',
+    'hours_today': 'आज के घंटे',
+    'history': 'इतिहास',
+    'no_records': 'अभी कोई रिकॉर्ड नहीं',
+    'hrs': 'घं',
+    'mins': 'मि',
+  },
+};
+
+const _dayNames = {
+  'ar': [
+    'الاثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت',
+    'الأحد',
+  ],
+  'en': [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ],
+  'hi': [
+    'सोमवार',
+    'मंगलवार',
+    'बुधवार',
+    'गुरुवार',
+    'शुक्रवार',
+    'शनिवार',
+    'रविवार',
+  ],
+};
+
+String t(String k) => _tr[langNotifier.value]?[k] ?? _tr['ar']![k] ?? k;
+String dayName(int weekday) =>
+    (_dayNames[langNotifier.value] ?? _dayNames['ar']!)[weekday - 1];
+
+Future<void> setLang(String code) async {
+  langNotifier.value = code;
+  final p = await SharedPreferences.getInstance();
+  await p.setString('lang', code);
+}
+
+class LangMenu extends StatelessWidget {
+  const LangMenu({super.key});
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<String>(
+    icon: const Icon(Icons.language, color: Colors.white),
+    onSelected: setLang,
+    itemBuilder: (c) => [
+      for (final e in _langNames.entries)
+        PopupMenuItem<String>(
+          value: e.key,
+          child: Row(
+            children: [
+              Expanded(child: Text(e.value)),
+              if (langNotifier.value == e.key)
+                const Icon(Icons.check, size: 18),
+            ],
+          ),
+        ),
+    ],
+  );
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: firebaseOptions);
+  final prefs = await SharedPreferences.getInstance();
+  langNotifier.value = prefs.getString('lang') ?? 'ar';
   runApp(const App());
 }
 
@@ -49,19 +305,19 @@ String authErr(Object e) {
   if (e is FirebaseAuthException) {
     switch (e.code) {
       case 'network-request-failed':
-        return 'تعذر الاتصال، تأكد من الإنترنت';
+        return t('err_network');
       case 'too-many-requests':
-        return 'محاولات كثيرة، حاول بعد قليل';
+        return t('err_many');
       case 'user-disabled':
-        return 'الحساب موقوف، راجع المكتب';
+        return t('err_disabled');
       case 'operation-not-allowed':
       case 'invalid-api-key':
-        return 'إعدادات التطبيق غير مكتملة، راجع المكتب';
+        return t('err_config');
       default:
-        return 'الكود أو الرقم السري غير صحيح';
+        return t('err_creds');
     }
   }
-  return 'تعذر تسجيل الدخول، حاول مرة أخرى';
+  return t('err_login');
 }
 
 Future<void> signIn(String code, String pass) =>
@@ -132,28 +388,31 @@ class Bio {
 class App extends StatelessWidget {
   const App({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'الحضور والانصراف',
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: kPrimary),
-      scaffoldBackgroundColor: kBg,
-    ),
-    builder: (c, w) =>
-        Directionality(textDirection: TextDirection.rtl, child: w!),
-    home: StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (c, s) {
-        if (s.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        return s.data == null
-            ? const LoginPage()
-            : const LockGate(child: HomePage());
-      },
+  Widget build(BuildContext context) => ValueListenableBuilder<String>(
+    valueListenable: langNotifier,
+    builder: (context, lang, _) => MaterialApp(
+      title: t('app_title'),
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: kPrimary),
+        scaffoldBackgroundColor: kBg,
+      ),
+      builder: (c, w) => Directionality(
+        textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+        child: w!,
+      ),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (c, s) {
+          if (s.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return s.data == null ? LoginPage() : LockGate(child: HomePage());
+        },
+      ),
     ),
   );
 }
@@ -193,7 +452,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> login() async {
     if (code.text.trim().isEmpty || pass.text.isEmpty) {
-      setState(() => err = 'اكتب كود الموظف والرقم السري');
+      setState(() => err = t('need_creds'));
       return;
     }
     setState(() {
@@ -212,7 +471,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> bioLogin() async {
     final c = bioCreds;
     if (c == null) return;
-    if (!await Bio.authenticate('سجّل دخولك بالبصمة')) return;
+    if (!await Bio.authenticate(t('bio_login_reason'))) return;
     setState(() {
       busy = true;
       err = null;
@@ -227,147 +486,158 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: SingleChildScrollView(
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            height: 300,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [kDark, kPrimary],
-              ),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
-            ),
-            child: SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 92,
-                    height: 92,
-                    decoration: const BoxDecoration(
-                      color: Color(0x33FFFFFF),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.fingerprint,
-                      size: 56,
-                      color: Colors.white,
-                    ),
+    body: Stack(
+      children: [
+        SingleChildScrollView(
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                height: 300,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: [kDark, kPrimary],
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'الحضور والانصراف',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(40),
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'سجّل دخولك للمتابعة',
-                    style: TextStyle(color: Color(0xCCFFFFFF)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Transform.translate(
-            offset: const Offset(0, -40),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: code,
-                    textInputAction: TextInputAction.next,
-                    autocorrect: false,
-                    decoration: deco('كود الموظف', Icons.badge_outlined),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: pass,
-                    obscureText: hide,
-                    onSubmitted: (_) => login(),
-                    decoration: deco(
-                      'الرقم السري',
-                      Icons.lock_outline,
-                      suffix: IconButton(
-                        icon: Icon(
-                          hide
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 92,
+                        height: 92,
+                        decoration: const BoxDecoration(
+                          color: Color(0x33FFFFFF),
+                          shape: BoxShape.circle,
                         ),
-                        onPressed: () => setState(() => hide = !hide),
+                        child: const Icon(
+                          Icons.fingerprint,
+                          size: 56,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      Text(
+                        t('app_title'),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        t('login_sub'),
+                        style: TextStyle(color: Color(0xCCFFFFFF)),
+                      ),
+                    ],
                   ),
-                  if (err != null)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(top: 14),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              Transform.translate(
+                offset: const Offset(0, -40),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 24,
+                        offset: Offset(0, 8),
                       ),
-                      child: Text(
-                        err!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFFB71C1C)),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: code,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        decoration: deco(t('emp_code'), Icons.badge_outlined),
                       ),
-                    ),
-                  const SizedBox(height: 20),
-                  FilledButton(
-                    style: bigStyle,
-                    onPressed: busy ? null : login,
-                    child: busy
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: pass,
+                        obscureText: hide,
+                        onSubmitted: (_) => login(),
+                        decoration: deco(
+                          t('password'),
+                          Icons.lock_outline,
+                          suffix: IconButton(
+                            icon: Icon(
+                              hide
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                             ),
-                          )
-                        : const Text('دخول'),
-                  ),
-                  if (bioCreds != null) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(54),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                            onPressed: () => setState(() => hide = !hide),
+                          ),
                         ),
                       ),
-                      onPressed: busy ? null : bioLogin,
-                      icon: const Icon(Icons.fingerprint),
-                      label: const Text('الدخول بالبصمة'),
-                    ),
-                  ],
-                ],
+                      if (err != null)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(top: 14),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            err!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Color(0xFFB71C1C)),
+                          ),
+                        ),
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        style: bigStyle,
+                        onPressed: busy ? null : login,
+                        child: busy
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(t('login')),
+                      ),
+                      if (bioCreds != null) ...[
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(54),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: busy ? null : bioLogin,
+                          icon: const Icon(Icons.fingerprint),
+                          label: Text(t('bio_login')),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+        PositionedDirectional(
+          top: 0,
+          end: 4,
+          child: SafeArea(child: LangMenu()),
+        ),
+      ],
     ),
   );
 }
@@ -426,7 +696,7 @@ class _LockGateState extends State<LockGate> with WidgetsBindingObserver {
   }
 
   Future<void> unlock() async {
-    final ok = await Bio.authenticate('افتح التطبيق بالبصمة');
+    final ok = await Bio.authenticate(t('unlock_reason'));
     if (ok && mounted) setState(() => locked = false);
   }
 
@@ -453,8 +723,8 @@ class _LockGateState extends State<LockGate> with WidgetsBindingObserver {
                         color: Colors.white,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'التطبيق مقفل',
+                      Text(
+                        t('locked'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -473,12 +743,12 @@ class _LockGateState extends State<LockGate> with WidgetsBindingObserver {
                         ),
                         onPressed: unlock,
                         icon: const Icon(Icons.fingerprint),
-                        label: const Text('فتح بالبصمة'),
+                        label: Text(t('unlock')),
                       ),
                       TextButton(
                         onPressed: () => FirebaseAuth.instance.signOut(),
-                        child: const Text(
-                          'تسجيل خروج',
+                        child: Text(
+                          t('logout'),
                           style: TextStyle(color: Color(0xCCFFFFFF)),
                         ),
                       ),
@@ -531,23 +801,14 @@ class _LiveClockState extends State<LiveClock> {
   );
 }
 
-const _days = [
-  'الاثنين',
-  'الثلاثاء',
-  'الأربعاء',
-  'الخميس',
-  'الجمعة',
-  'السبت',
-  'الأحد',
-];
 String dayLabel(DateTime d) =>
-    '${_days[d.weekday - 1]}  ${intl.DateFormat('yyyy/MM/dd').format(d)}';
+    '${dayName(d.weekday)}  ${intl.DateFormat('yyyy/MM/dd').format(d)}';
 String hm(DateTime? d) =>
     d == null ? '--:--' : intl.DateFormat('HH:mm').format(d.toLocal());
 String dur(Duration d) {
   final h = d.inHours;
   final m = d.inMinutes % 60;
-  return '${h}س ${m}د';
+  return h.toString() + t('hrs') + ' ' + m.toString() + t('mins');
 }
 
 /// ---------------- الشاشة الرئيسية ----------------
@@ -582,18 +843,18 @@ class _HomePageState extends State<HomePage> {
       final ref = db.collection('employees').doc(uid);
       var d = (await ref.get()).data();
       if (d == null) {
-        fatal = 'حسابك غير مسجل. راجع المكتب.';
+        fatal = t('fatal_none');
       } else if (d['active'] != true) {
-        fatal = 'حسابك موقوف. راجع المكتب.';
+        fatal = t('fatal_inactive');
       } else if ((d['deviceId'] ?? '') == '') {
         await ref.update({'deviceId': deviceId});
         d['deviceId'] = deviceId;
       } else if (d['deviceId'] != deviceId) {
-        fatal = 'حسابك مربوط بموبايل آخر. راجع المكتب لفك الربط.';
+        fatal = t('fatal_device');
       }
       emp = d;
     } catch (_) {
-      fatal = 'تعذر تحميل البيانات، تأكد من الإنترنت';
+      fatal = t('fatal_load');
     }
     if (mounted) setState(() {});
     if (fatal == null) {
@@ -613,18 +874,16 @@ class _HomePageState extends State<HomePage> {
     final yes = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('الدخول بالبصمة'),
-        content: const Text(
-          'تحب تفعّل الدخول بالبصمة بدل كتابة الرقم السري كل مرة؟',
-        ),
+        title: Text(t('bio_title')),
+        content: Text(t('bio_ask')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('لاحقًا'),
+            child: Text(t('later')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('تفعيل'),
+            child: Text(t('enable')),
           ),
         ],
       ),
@@ -634,15 +893,15 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> enableBio(String code, String pass) async {
     if (!await Bio.supported()) {
-      msg('الجهاز لا يدعم البصمة');
+      msg(t('bio_unsupported'));
       return;
     }
-    if (!await Bio.authenticate('تأكيد تفعيل الدخول بالبصمة')) {
-      msg('لم يتم التفعيل');
+    if (!await Bio.authenticate(t('bio_confirm_reason'))) {
+      msg(t('not_enabled'));
       return;
     }
     await Bio.save(code, pass);
-    msg('تم تفعيل الدخول بالبصمة ✅');
+    msg(t('bio_enabled'));
   }
 
   Future<void> askPassAndEnable() async {
@@ -650,20 +909,20 @@ class _HomePageState extends State<HomePage> {
     final pw = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('تأكيد الرقم السري'),
+        title: Text(t('confirm_pw')),
         content: TextField(
           controller: c,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'الرقم السري'),
+          decoration: InputDecoration(labelText: t('password')),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('إلغاء'),
+            child: Text(t('cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, c.text),
-            child: const Text('متابعة'),
+            child: Text(t('continue')),
           ),
         ],
       ),
@@ -675,7 +934,7 @@ class _HomePageState extends State<HomePage> {
         EmailAuthProvider.credential(email: user.email!, password: pw),
       );
     } on FirebaseAuthException {
-      msg('الرقم السري غير صحيح');
+      msg(t('wrong_pw'));
       return;
     }
     await enableBio('${emp?['code'] ?? ''}', pw);
@@ -693,8 +952,8 @@ class _HomePageState extends State<HomePage> {
                 future: Bio.enabled(),
                 builder: (c, s) => SwitchListTile(
                   secondary: const Icon(Icons.fingerprint),
-                  title: const Text('الدخول بالبصمة'),
-                  subtitle: const Text('فتح التطبيق وتسجيل الدخول بالبصمة'),
+                  title: Text(t('bio_title')),
+                  subtitle: Text(t('bio_sub')),
                   value: s.data ?? false,
                   onChanged: (v) async {
                     if (v) {
@@ -703,14 +962,14 @@ class _HomePageState extends State<HomePage> {
                     } else {
                       await Bio.clear();
                       set(() {});
-                      msg('تم إيقاف الدخول بالبصمة');
+                      msg(t('bio_disabled'));
                     }
                   },
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.logout),
-                title: const Text('تسجيل خروج'),
+                title: Text(t('logout')),
                 onTap: () {
                   Navigator.pop(c);
                   FirebaseAuth.instance.signOut();
@@ -732,26 +991,45 @@ class _HomePageState extends State<HomePage> {
       }
       if (perm == LocationPermission.denied ||
           perm == LocationPermission.deniedForever) {
-        return msg('لازم تسمح بالوصول للموقع');
+        return msg(t('loc_permission'));
       }
       if (!await Geolocator.isLocationServiceEnabled()) {
-        return msg('شغّل الـ GPS');
+        return msg(t('gps_on'));
       }
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
-      if (pos.isMocked) return msg('تم رفض التسجيل: موقع وهمي');
+      if (pos.isMocked) return msg(t('mock_loc'));
 
       final auth = LocalAuthentication();
       bool verified = false;
       if (await auth.isDeviceSupported()) {
         verified = await auth.authenticate(
-          localizedReason: type == 'in' ? 'تأكيد الحضور' : 'تأكيد الانصراف',
+          localizedReason: type == 'in' ? t('reason_in') : t('reason_out'),
         );
-        if (!verified) return msg('فشل التحقق بالبصمة');
+        if (!verified) return msg(t('bio_failed'));
       }
+
+      // العنوان بالاسم (شارع / منطقة / مدينة) من الإحداثيات
+      String address = '';
+      try {
+        await setLocaleIdentifier('ar');
+        final pm = await placemarkFromCoordinates(
+          pos.latitude,
+          pos.longitude,
+        ).timeout(const Duration(seconds: 6));
+        if (pm.isNotEmpty) {
+          final p = pm.first;
+          final parts = <String>[];
+          for (final v in [p.street, p.subLocality, p.locality]) {
+            final t = (v ?? '').trim();
+            if (t.isNotEmpty && !parts.contains(t)) parts.add(t);
+          }
+          address = parts.join('، ');
+        }
+      } catch (_) {}
 
       // تحديد المكان تلقائيًا: أقرب موقع معروف، وإلا يتسجل موقع جديد
       final siteSnap = await db.collection('sites').get();
@@ -777,7 +1055,9 @@ class _HomePageState extends State<HomePage> {
         siteId = best.id;
         siteName = '${best.data()['name'] ?? ''}';
       } else {
-        siteName = 'موقع جديد ${siteSnap.docs.length + 1}';
+        siteName = address.isNotEmpty
+            ? (address.length > 80 ? address.substring(0, 80) : address)
+            : 'موقع جديد ${siteSnap.docs.length + 1}';
         final ref = await db.collection('sites').add({
           'name': siteName,
           'lat': pos.latitude,
@@ -798,15 +1078,16 @@ class _HomePageState extends State<HomePage> {
         'serverTime': FieldValue.serverTimestamp(),
         'siteId': siteId,
         'siteName': siteName,
+        'address': address,
         'lat': pos.latitude,
         'lng': pos.longitude,
         'distance': bestDist.round(),
         'verified': verified,
         'source': 'app',
       });
-      msg(type == 'in' ? 'تم تسجيل الحضور ✅' : 'تم تسجيل الانصراف ✅');
+      msg(type == 'in' ? t('done_in') : t('done_out'));
     } catch (e) {
-      msg('حدث خطأ، حاول مرة أخرى');
+      msg(t('generic_err'));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -834,8 +1115,8 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'مرحبًا',
+                      Text(
+                        t('welcome'),
                         style: TextStyle(color: Color(0xCCFFFFFF)),
                       ),
                       Text(
@@ -849,6 +1130,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
+                LangMenu(),
                 IconButton(
                   onPressed: settings,
                   icon: const Icon(
@@ -883,8 +1165,8 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 8),
                   Text(
                     isIn
-                        ? 'حاضر منذ $since${(site ?? '').isEmpty ? '' : ' • $site'}'
-                        : 'لم تسجّل حضور بعد',
+                        ? '${t('present_since')} $since${(site ?? '').isEmpty ? '' : ' • $site'}'
+                        : t('not_in'),
                     style: const TextStyle(color: Colors.white),
                   ),
                 ],
@@ -922,7 +1204,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        isIn ? 'تسجيل انصراف' : 'تسجيل حضور',
+                        isIn ? t('btn_out') : t('btn_in'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 19,
@@ -991,7 +1273,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 24),
                   OutlinedButton(
                     onPressed: () => FirebaseAuth.instance.signOut(),
-                    child: const Text('تسجيل خروج'),
+                    child: Text(t('logout')),
                   ),
                 ],
               ),
@@ -1088,7 +1370,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   title: Text(
-                    inn ? 'حضور' : 'انصراف',
+                    inn ? t('in') : t('out'),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text('${d['siteName'] ?? ''}'),
@@ -1120,25 +1402,29 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 22),
                     Row(
                       children: [
-                        stat(Icons.login, 'أول حضور', hm(firstIn)),
+                        stat(Icons.login, t('first_in'), hm(firstIn)),
                         const SizedBox(width: 10),
-                        stat(Icons.logout, 'آخر انصراف', hm(lastOut)),
+                        stat(Icons.logout, t('last_out'), hm(lastOut)),
                         const SizedBox(width: 10),
-                        stat(Icons.timer_outlined, 'ساعات اليوم', dur(worked)),
+                        stat(
+                          Icons.timer_outlined,
+                          t('hours_today'),
+                          dur(worked),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'السجل',
+                    Text(
+                      t('history'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     if (items.isEmpty)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.all(24),
-                        child: Center(child: Text('لا توجد سجلات بعد')),
+                        child: Center(child: Text(t('no_records'))),
                       ),
                     ...items,
                   ],
