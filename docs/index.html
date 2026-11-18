@@ -139,6 +139,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const fmtT = d => d ? d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '...';
 const fmtDT = d => d ? d.toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}) : '...';
 let role = null, employees = [], sites = [], unsubs = [], todayRecs = [];
+const siteNameOf = r => (sites.find(s=>s.id===r?.siteId)?.name) || r?.siteName || '-';
+const mapLink = r => (r && r.lat!=null) ? ` <a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" title="عرض على الخريطة">📍</a>` : '';
 
 const ERR={
  'auth/invalid-credential':'الإيميل أو الرقم السري غير صحيح',
@@ -251,7 +253,7 @@ function start(){
   }));
   unsubs.push(db.collection('sites').onSnapshot(s=>{
     sites = s.docs.map(d=>({id:d.id,...d.data()}));
-    renderSites(); renderEmps();
+    renderSites(); renderEmps(); renderLive();
   }));
   const t0 = new Date(); t0.setHours(0,0,0,0);
   unsubs.push(db.collection('attendance').where('serverTime','>=',t0).orderBy('serverTime','desc')
@@ -272,7 +274,7 @@ function renderLive(){
     const st = !r ? '<span class="tag abs">لم يحضر</span>' : r.type==='in' ? '<span class="tag in">حاضر</span>' : '<span class="tag out">انصرف</span>';
     const flag = r && r.source==='app' && !r.verified ? ' <span class="warn" title="بدون بصمة">⚠</span>' : '';
     return `<tr><td>${esc(e.name)}</td><td>${esc(e.code)}</td><td>${esc(e.kind==='office'?'مكتب':'عامل')}</td><td>${st}${flag}</td>
-      <td>${esc(r?.siteName||'-')}</td><td>${fmtT(r?.serverTime?.toDate())}</td></tr>`;
+      <td>${r?esc(siteNameOf(r))+mapLink(r):'-'}</td><td>${fmtT(r?.serverTime?.toDate())}</td></tr>`;
   }).join('');
   $('t-live').innerHTML = `
     <div class="grid">
@@ -285,7 +287,7 @@ function renderLive(){
 }
 function manualForm(){
   const opts = employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
-  const sopts = sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  const sopts = '<option value="">بدون موقع</option>'+sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
   return `<div class="card"><b>تسجيل يدوي (لعامل نسي)</b><br>
     <select id="m-emp">${opts}</select>
     <select id="m-type"><option value="in">حضور</option><option value="out">انصراف</option></select>
@@ -310,29 +312,25 @@ async function addManual(){
 /* ---------- العمال والموظفين ---------- */
 function renderEmps(){
   if(role!=='admin') return;
-  const sopts = sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
   const rows = employees.map(e=>`<tr>
     <td>${esc(e.name)}</td><td>${esc(e.code)}</td><td>${e.kind==='office'?'مكتب':'عامل'}</td>
-    <td>${(e.sites||[]).map(id=>esc(sites.find(s=>s.id===id)?.name||'?')).join('، ')}</td>
     <td>${e.deviceId?'مربوط':'غير مربوط'}</td>
     <td>${e.active?'مفعّل':'<span class="warn">موقوف</span>'}</td>
     <td>
       <button class="b g" onclick="toggleActive('${e.id}',${!e.active})">${e.active?'إيقاف':'تفعيل'}</button>
       <button class="b g" onclick="resetDevice('${e.id}')">فك ربط الجهاز</button>
-      <button class="b g" onclick="editSites('${e.id}')">المواقع</button>
     </td></tr>`).join('');
   $('t-emps').innerHTML = `
     <div class="card"><b>إضافة عامل / موظف</b><br>
       <input id="n-name" placeholder="الاسم"><input id="n-code" placeholder="الكود (حروف/أرقام إنجليزي)">
       <input id="n-pass" placeholder="رقم سري (6 أحرف+)"><input id="n-phone" placeholder="الموبايل">
       <select id="n-kind"><option value="worker">عامل</option><option value="office">موظف مكتب</option></select>
-      <select id="n-sites" multiple size="3" title="اضغط Ctrl لاختيار أكثر من موقع">${sopts}</select>
       <button class="b" onclick="addEmp()">إضافة</button><div id="n-msg"></div></div>
     <div class="card"><b>مستخدمو اللوحة</b> <small>(مكتب = عرض فقط، مدير = تحكم كامل)</small><br>
       <input id="u-email" type="email" placeholder="الإيميل"><input id="u-pass" placeholder="رقم سري (6+)">
       <select id="u-role"><option value="office">مكتب (عرض)</option><option value="admin">مدير</option></select>
       <button class="b" onclick="addPanelUser()">إضافة</button></div>
-    <div class="card scroll"><table><tr><th>الاسم</th><th>الكود</th><th>النوع</th><th>المواقع</th><th>الجهاز</th><th>الحالة</th><th></th></tr>${rows}</table></div>`;
+    <div class="card scroll"><table><tr><th>الاسم</th><th>الكود</th><th>النوع</th><th>الجهاز</th><th>الحالة</th><th></th></tr>${rows}</table></div>`;
 }
 let secondary;
 async function addEmp(){
@@ -346,7 +344,6 @@ async function addEmp(){
     await secondary.auth().signOut();
     await db.collection('employees').doc(cred.user.uid).set({
       name, code, phone:$('n-phone').value.trim(), kind:$('n-kind').value,
-      sites:[...$('n-sites').selectedOptions].map(o=>o.value),
       deviceId:'', active:true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     $('n-msg').textContent='تمت الإضافة ✅';
@@ -366,31 +363,23 @@ async function addPanelUser(){
 }
 const toggleActive=(id,v)=>db.collection('employees').doc(id).update({active:v});
 const resetDevice=id=>confirm('فك ربط الجهاز؟ العامل يربط موبايله الجديد عند أول دخول')&&db.collection('employees').doc(id).update({deviceId:''});
-function editSites(id){
-  const e=employees.find(x=>x.id===id);
-  const list = sites.map((s,i)=>`${i+1}- ${s.name}`).join('\n');
-  const v = prompt(`اكتب أرقام المواقع مفصولة بفاصلة:\n${list}`, (e.sites||[]).map(x=>sites.findIndex(s=>s.id===x)+1).join(','));
-  if(v===null) return;
-  const ids = v.split(',').map(n=>sites[parseInt(n)-1]?.id).filter(Boolean);
-  db.collection('employees').doc(id).update({sites:ids});
-}
-
 /* ---------- المواقع ---------- */
 function renderSites(){
   if(role!=='admin') return;
-  const rows = sites.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.lat}, ${s.lng}</td><td>${s.radius} م</td>
-    <td><button class="b r" onclick="delSite('${s.id}')">حذف</button></td></tr>`).join('');
-  $('t-sites').innerHTML = `
-    <div class="card"><b>إضافة موقع عمل</b> <small>(من Google Maps: اضغط مطولًا على المكان وانسخ الإحداثيات)</small><br>
-      <input id="s-name" placeholder="اسم الموقع"><input id="s-lat" placeholder="خط العرض lat"><input id="s-lng" placeholder="خط الطول lng">
-      <input id="s-rad" type="number" value="100" style="width:90px"> متر
-      <button class="b" onclick="addSite()">إضافة</button></div>
-    <div class="card scroll"><table><tr><th>الاسم</th><th>الإحداثيات</th><th>النطاق</th><th></th></tr>${rows}</table></div>`;
+  const list=[...sites].sort((a,b)=>(b.auto?1:0)-(a.auto?1:0));
+  const rows=list.map(s=>`<tr><td>${esc(s.name)} ${s.auto?'<span class="warn">(جديد - غيّر الاسم)</span>':''}</td>
+    <td><a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank">📍 على الخريطة</a></td>
+    <td><button class="b" onclick="renameSite('${s.id}')">تغيير الاسم</button>
+        <button class="b r" onclick="delSite('${s.id}')">حذف</button></td></tr>`).join('');
+  $('t-sites').innerHTML=`
+    <div class="card"><b>المواقع بتتسجل تلقائيًا</b>
+      <p class="note">أول ما أي عامل يسجل حضور في مكان جديد، بيتضاف مكانه هنا باسم "موقع جديد". كل اللي عليك تغيّر الاسم.</p></div>
+    <div class="card scroll"><table><tr><th>الاسم</th><th>الخريطة</th><th></th></tr>${rows||'<tr><td colspan="3">لا توجد مواقع بعد</td></tr>'}</table></div>`;
 }
-async function addSite(){
-  const lat=parseFloat($('s-lat').value), lng=parseFloat($('s-lng').value), radius=parseInt($('s-rad').value);
-  if(!$('s-name').value.trim()||isNaN(lat)||isNaN(lng)) return alert('أكمل البيانات');
-  await db.collection('sites').add({name:$('s-name').value.trim(),lat,lng,radius:radius||100});
+async function renameSite(id){
+  const s=sites.find(x=>x.id===id);
+  const n=prompt('اسم الموقع',s?.name||'');
+  if(n&&n.trim()) await db.collection('sites').doc(id).update({name:n.trim(),auto:false});
 }
 const delSite=id=>confirm('حذف الموقع؟')&&db.collection('sites').doc(id).delete();
 
@@ -431,7 +420,7 @@ async function runReport(){
       else if(open){
         const ti=open.serverTime.toDate();
         const key=ti.toLocaleDateString('en-CA');
-        const d=days[key]=days[key]||{emp:r.employeeName,date:key,first:ti,last:t,ms:0,site:open.siteName};
+        const d=days[key]=days[key]||{emp:r.employeeName,date:key,first:ti,last:t,ms:0,site:siteNameOf(open)};
         d.ms+=t-ti; d.last=t; open=null;
       }
     });
