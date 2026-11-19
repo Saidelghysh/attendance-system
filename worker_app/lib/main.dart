@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart' as intl;
@@ -82,6 +83,9 @@ const Map<String, Map<String, String>> _tr = {
     'no_records': 'لا توجد سجلات بعد',
     'hrs': 'س',
     'mins': 'د',
+    'update_title': 'تحديث جديد',
+    'update_body': 'يوجد إصدار جديد من التطبيق. اضغط تحديث لتنزيله، وبعد التنزيل افتح الملف للتثبيت.',
+    'update_now': 'تحديث الآن',
   },
   'en': {
     'app_title': 'Attendance',
@@ -145,6 +149,9 @@ const Map<String, Map<String, String>> _tr = {
     'no_records': 'No records yet',
     'hrs': 'h',
     'mins': 'm',
+    'update_title': 'Update available',
+    'update_body': 'A new version is available. Tap Update to download it, then open the file to install.',
+    'update_now': 'Update now',
   },
   'hi': {
     'app_title': 'उपस्थिति',
@@ -206,6 +213,9 @@ const Map<String, Map<String, String>> _tr = {
     'no_records': 'अभी कोई रिकॉर्ड नहीं',
     'hrs': 'घं',
     'mins': 'मि',
+    'update_title': 'नया अपडेट उपलब्ध',
+    'update_body': 'नया संस्करण उपलब्ध है। डाउनलोड के लिए अपडेट दबाएँ, फिर इंस्टॉल करने के लिए फ़ाइल खोलें।',
+    'update_now': 'अभी अपडेट करें',
   },
 };
 
@@ -416,6 +426,21 @@ class App extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// رقم النسخة (يتحدد وقت البناء من GitHub) ورابط ملف النسخة الأحدث
+const int kBuild = int.fromEnvironment('BUILD_NUMBER', defaultValue: 0);
+const String kVersionUrl =
+    'https://github.com/Saidelghysh/attendance-system/releases/download/latest/version.json';
+const MethodChannel _updaterChannel = MethodChannel('app/updater');
+
+Future<bool> openUrl(String url) async {
+  try {
+    return await _updaterChannel.invokeMethod<bool>('open', {'url': url}) ??
+        false;
+  } catch (_) {
+    return false;
+  }
 }
 
 /// تحويل الإحداثيات لعنوان مقروء (OpenStreetMap) بدون أي مكتبة إضافية
@@ -896,6 +921,44 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
     if (fatal == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => offerBio());
+      checkUpdate();
+    }
+  }
+
+  Future<void> checkUpdate() async {
+    if (kBuild == 0) return; // نسخة تجريبية محلية
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
+    try {
+      final req = await client.getUrl(Uri.parse(kVersionUrl));
+      final res = await req.close().timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) return;
+      final j = jsonDecode(
+        await res.transform(utf8.decoder).join(),
+      ) as Map<String, dynamic>;
+      final remote = (j['build'] as num).toInt();
+      final apk = '${j['apk'] ?? ''}';
+      if (remote <= kBuild || apk.isEmpty || !mounted) return;
+      final yes = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: Text(t('update_title')),
+          content: Text(t('update_body')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text(t('later')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: Text(t('update_now')),
+            ),
+          ],
+        ),
+      );
+      if (yes == true) await openUrl(apk);
+    } catch (_) {
+    } finally {
+      client.close();
     }
   }
 
