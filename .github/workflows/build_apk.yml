@@ -1,0 +1,110 @@
+name: Build Zad Alakhira Android
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.35.7
+          cache: true
+
+      - name: Generate Android project
+        run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
+
+      - name: Add bundled adhan notification sounds
+        run: |
+          mkdir -p android/app/src/main/res/raw
+          curl --fail --location --retry 3 --retry-delay 2 https://cdn.aladhan.com/audio/adhans/a9.mp3 -o android/app/src/main/res/raw/azan_a9.mp3
+          curl --fail --location --retry 3 --retry-delay 2 https://cdn.aladhan.com/audio/adhans/a4.mp3 -o android/app/src/main/res/raw/azan_a4.mp3
+          curl --fail --location --retry 3 --retry-delay 2 https://cdn.aladhan.com/audio/adhans/a11-mansour-al-zahrani.mp3 -o android/app/src/main/res/raw/azan_a11.mp3
+          curl --fail --location --retry 3 --retry-delay 2 https://cdn.aladhan.com/audio/adhans/a1.mp3 -o android/app/src/main/res/raw/azan_a1.mp3
+          curl --fail --location --retry 3 --retry-delay 2 https://cdn.aladhan.com/audio/adhans/a2.mp3 -o android/app/src/main/res/raw/azan_a2.mp3
+
+      - name: Remove Flutter sample test
+        run: rm -f test/widget_test.dart
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Configure Android compatibility and permissions
+        run: |
+          printf '\nandroid.newDsl=false\nandroid.builtInKotlin=false\n' >> android/gradle.properties
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/src/main/AndroidManifest.xml')
+          s=p.read_text()
+          marker='<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
+          perms='''<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.VIBRATE"/>
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>'''
+          if 'android.permission.INTERNET' not in s:
+              s=s.replace(marker, marker+'\n    '+perms)
+          if 'ScheduledNotificationBootReceiver' not in s:
+              receivers='''
+              <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+              <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                  <intent-filter>
+                      <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                      <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                      <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                      <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                  </intent-filter>
+              </receiver>
+              '''
+              s=s.replace('</application>', receivers+'\n</application>')
+          if '<queries>' not in s:
+              q='''<queries>
+                  <intent>
+                      <action android:name="android.intent.action.VIEW"/>
+                      <category android:name="android.intent.category.BROWSABLE"/>
+                      <data android:scheme="https"/>
+                  </intent>
+              </queries>'''
+              s=s.replace('</manifest>',q+'\n</manifest>')
+          p.write_text(s)
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/build.gradle.kts')
+          s=p.read_text()
+          if 'isCoreLibraryDesugaringEnabled = true' not in s:
+              s=s.replace('compileOptions {','compileOptions {\n        isCoreLibraryDesugaringEnabled = true',1)
+          if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in s:
+              s += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+          p.write_text(s)
+          PY
+
+      - name: Analyze Dart code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Build Play Store AAB
+        run: flutter build appbundle --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zad-alakhira-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zad-alakhira-play-store-aab
+          path: build/app/outputs/bundle/release/app-release.aab
