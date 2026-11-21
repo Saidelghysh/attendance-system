@@ -86,6 +86,9 @@ const Map<String, Map<String, String>> _tr = {
     'update_title': 'تحديث جديد',
     'update_body': 'يوجد إصدار جديد من التطبيق. اضغط تحديث لتنزيله، وبعد التنزيل افتح الملف للتثبيت.',
     'update_now': 'تحديث الآن',
+    'about_title': 'حول التطبيق',
+    'signature': 'تطوير: سعيد الغايش © 2026',
+    'version': 'الإصدار',
   },
   'en': {
     'app_title': 'Attendance',
@@ -152,6 +155,9 @@ const Map<String, Map<String, String>> _tr = {
     'update_title': 'Update available',
     'update_body': 'A new version is available. Tap Update to download it, then open the file to install.',
     'update_now': 'Update now',
+    'about_title': 'About',
+    'signature': 'Developed by Said Elghysh © 2026',
+    'version': 'Version',
   },
   'hi': {
     'app_title': 'उपस्थिति',
@@ -216,6 +222,9 @@ const Map<String, Map<String, String>> _tr = {
     'update_title': 'नया अपडेट उपलब्ध',
     'update_body': 'नया संस्करण उपलब्ध है। डाउनलोड के लिए अपडेट दबाएँ, फिर इंस्टॉल करने के लिए फ़ाइल खोलें।',
     'update_now': 'अभी अपडेट करें',
+    'about_title': 'ऐप के बारे में',
+    'signature': 'Developed by Said Elghysh © 2026',
+    'version': 'संस्करण',
   },
 };
 
@@ -691,6 +700,19 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
+              Transform.translate(
+                offset: const Offset(0, -24),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    t('signature'),
+                    style: const TextStyle(
+                      color: Color(0xFF90A4AE),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1065,6 +1087,14 @@ class _HomePageState extends State<HomePage> {
                       msg(t('bio_disabled'));
                     }
                   },
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                isThreeLine: true,
+                title: Text(t('about_title')),
+                subtitle: Text(
+                  '${t('version')} 1.0 (${kBuild == 0 ? 'dev' : kBuild})\n${t('signature')}',
                 ),
               ),
               ListTile(
