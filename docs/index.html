@@ -19,7 +19,7 @@
   main{padding:22px;max-width:1200px;margin:auto}
   .card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0000000f}
   table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{padding:10px;border-bottom:1px solid #eef0f2;text-align:right}
+  th,td{padding:10px;border-bottom:1px solid #eef0f2;text-align:start}
   th{background:#f6f8f9;color:var(--mut);font-weight:600}
   tr:hover td{background:#fafcfc}
   input,select{padding:9px 12px;border:1px solid #c8d0d6;border-radius:8px;font:14px Cairo,Tahoma;margin:3px;background:#fff}
@@ -45,11 +45,11 @@
   .auth-card{margin-top:40px}
   .auth-card h2{margin:6px 0 2px;font-size:22px;color:var(--p2)}
   .auth-card .sub{margin:0 0 18px;color:var(--mut);font-size:14px}
-  .auth-card label{display:block;text-align:right;font-size:13px;color:var(--mut);margin:10px 4px 0}
+  .auth-card label{display:block;text-align:start;font-size:13px;color:var(--mut);margin:10px 4px 0}
   .auth-card input{width:100%;margin:4px 0}
   .pw{position:relative}
-  .pw input{padding-left:40px}
-  .eye{position:absolute;left:8px;top:8px;border:0;background:none;cursor:pointer;font-size:18px}
+  .pw input{padding-inline-end:40px}
+  .eye{position:absolute;inset-inline-end:8px;top:8px;border:0;background:none;cursor:pointer;font-size:18px}
   .pbtn.big{width:100%;padding:12px;font-size:16px;margin:16px 0 6px}
   .links{display:flex;justify-content:space-between;font-size:13px;margin-top:6px}
   .links a,.auth-card a{color:var(--p);text-decoration:none}
@@ -58,11 +58,16 @@
   .lmsg.bad{background:#ffebee;color:#b71c1c;padding:10px}
   .lmsg.ok{background:#e8f5e9;color:#1b5e20;padding:10px}
   .note{font-size:13px;color:var(--mut);margin:6px 0}
+  .langbtn{border:1px solid #cfd8dc;background:#fff;color:var(--p2);border-radius:16px;padding:4px 12px;cursor:pointer;font:600 12px Cairo,Tahoma}
+  .auth-card{position:relative}
+  .langbtn.lg{position:absolute;top:12px;inset-inline-start:12px}
+  header .langbtn{background:#ffffff26;color:#fff;border-color:#ffffff55;margin-inline-end:6px}
 </style>
 </head>
 <body>
 <div id="login" class="auth-wrap">
   <div class="auth-card">
+    <button class="langbtn lg" data-nt onclick="toggleLang()">English</button>
     <div class="logo">🕒</div>
     <h2>نظام الحضور والانصراف</h2>
     <p class="sub">لوحة تحكم المكتب</p>
@@ -102,7 +107,7 @@
 </div>
 
 <div id="app" class="hide">
-  <header><b>لوحة الحضور والانصراف</b><span><span id="who"></span> <button class="b g" onclick="auth.signOut()">خروج</button></span></header>
+  <header><b>لوحة الحضور والانصراف</b><span><span id="who"></span> <button class="langbtn" data-nt onclick="toggleLang()">English</button><button class="b g" onclick="auth.signOut()">خروج</button></span></header>
   <nav id="tabs"></nav>
   <main>
     <section id="t-live"></section>
@@ -136,8 +141,53 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth(), db = firebase.firestore();
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmtT = d => d ? d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '...';
-const fmtDT = d => d ? d.toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}) : '...';
+
+/* ===== اللغة (عربي / English) ===== */
+let LANG='ar'; try{ LANG=localStorage.getItem('lang')||'ar'; }catch(e){}
+const EN={"لوحة الحضور والانصراف": "Attendance Dashboard", "نظام الحضور والانصراف": "Attendance System", "لوحة تحكم المكتب": "Office control panel", "الإيميل": "Email", "الرقم السري": "Password", "دخول": "Sign in", "نسيت الرقم السري؟": "Forgot password?", "أول مرة؟ إنشاء المدير": "First time? Create admin", "اكتب إيميلك وهنبعتلك رابط لتغيير الرقم السري.": "Enter your email and we will send you a link to reset your password.", "إرسال الرابط": "Send link", "← رجوع للدخول": "← Back to sign in", "إنشاء حساب المدير يتم مرة واحدة فقط.": "The admin account can only be created once.", "رقم سري (6 أحرف+)": "Password (6+ characters)", "إنشاء": "Create", "الحساب": "The account", "غير مسجل كمدير.": "is not registered as an admin.", "لو ده أول حساب مدير لسه ما اتفعّلش، اضغط تفعيل.": "If this is the first admin account and it is not activated yet, press Activate.", "تفعيل هذا الحساب كمدير": "Activate this account as admin", "تسجيل خروج": "Sign out", "خروج": "Sign out", "عرض على الخريطة": "View on map", "الإيميل أو الرقم السري غير صحيح": "Wrong email or password", "الرقم السري غير صحيح": "Wrong password", "هذا الإيميل غير مسجل": "This email is not registered", "صيغة الإيميل غير صحيحة": "Invalid email format", "اكتب الرقم السري": "Enter your password", "الرقم السري ضعيف (6 أحرف على الأقل)": "Password is too weak (at least 6 characters)", "هذا الإيميل مسجل بالفعل. سجّل دخول أو استخدم \"نسيت الرقم السري\"": "This email is already registered. Sign in or use \"Forgot password\"", "الدخول بالإيميل غير مفعّل في Firebase (Authentication ← Sign-in method ← Email/Password)": "Email sign-in is not enabled in Firebase (Authentication > Sign-in method > Email/Password)", "محاولات كثيرة، انتظر قليلًا ثم حاول": "Too many attempts, wait a moment and try again", "تعذر الاتصال بالإنترنت": "Could not connect to the internet", "مفتاح Firebase غير صحيح في firebase-config.json": "Invalid Firebase key in firebase-config.json", "قواعد Firestore غير منشورة أو لا تسمح بهذه العملية": "Firestore rules are not published or do not allow this operation", "خطأ: ": "Error: ", "اكتب الإيميل والرقم السري": "Enter your email and password", "اكتب الإيميل": "Enter your email", "تم إرسال رابط تغيير الرقم السري على إيميلك (راجع Spam كمان)": "A password reset link was sent to your email (check Spam too)", "لا يمكن التفعيل: غالبًا تم تعيين مدير من قبل، أو القواعد غير منشورة.": "Cannot activate: an admin probably already exists, or the rules are not published.", "اكتب الإيميل ورقم سري 6 أحرف على الأقل": "Enter an email and a password of at least 6 characters", " — لو الحساب اتعمل قبل كده سجّل دخول بيه.": " — If the account already exists, sign in with it.", "الحضور اللحظي": "Live attendance", "التقارير": "Reports", "العمال والموظفين": "Workers & employees", "المواقع": "Sites", " (مدير)": " (Admin)", " (مكتب)": " (Office)", "لم يحضر": "Absent", "حاضر": "Present", "انصرف": "Left", "مكتب": "Office", "عامل": "Worker", "بدون بصمة": "No fingerprint", "حاضر الآن": "Present now", "لم يحضر بعد": "Not arrived yet", "الاسم": "Name", "الكود": "Code", "النوع": "Type", "الحالة": "Status", "الموقع": "Site", "آخر تسجيل": "Last record", "بدون موقع": "No site", "تسجيل يدوي (لعامل نسي)": "Manual entry (for a worker who forgot)", "حضور": "Check-in", "انصراف": "Check-out", "حفظ": "Save", "اختر الموظف والوقت": "Select the employee and time", "تم الحفظ": "Saved", "مربوط": "Linked", "غير مربوط": "Not linked", "مفعّل": "Active", "موقوف": "Suspended", "إيقاف": "Suspend", "تفعيل": "Activate", "فك ربط الجهاز": "Unlink device", "إضافة عامل / موظف": "Add worker / employee", "الكود (حروف/أرقام إنجليزي)": "Code (English letters/numbers)", "الموبايل": "Mobile", "موظف مكتب": "Office employee", "إضافة": "Add", "مستخدمو اللوحة": "Panel users", "(مكتب = عرض فقط، مدير = تحكم كامل)": "(Office = view only, Admin = full control)", "رقم سري (6+)": "Password (6+)", "مكتب (عرض)": "Office (view)", "مدير": "Admin", "الجهاز": "Device", "أكمل الاسم والكود ورقم سري 6 أحرف على الأقل": "Enter the name, code and a password of at least 6 characters", "الكود: حروف إنجليزية وأرقام فقط": "Code: English letters and numbers only", "الكود مستخدم": "Code already in use", "تمت الإضافة ✅": "Added ✅", "تمت الإضافة": "Added", "أكمل الإيميل ورقم سري 6 أحرف على الأقل": "Enter an email and a password of at least 6 characters", "فك ربط الجهاز؟ العامل يربط موبايله الجديد عند أول دخول": "Unlink the device? The worker links the new phone on first sign-in", "(جديد - غيّر الاسم)": "(new - rename)", "📍 على الخريطة": "📍 On map", "تغيير الاسم": "Rename", "حذف": "Delete", "المواقع بتتسجل تلقائيًا": "Sites are recorded automatically", "أول ما أي عامل يسجل حضور في مكان جديد، بيتضاف مكانه هنا باسم \"موقع جديد\". كل اللي عليك تغيّر الاسم.": "When any worker checks in at a new place, it is added here as \"New site\". All you need to do is rename it.", "لا توجد مواقع بعد": "No sites yet", "الخريطة": "Map", "اسم الموقع": "Site name", "حذف الموقع؟": "Delete the site?", "كل الموظفين": "All employees", "من": "From", "إلى": "To", "ساعات العمل اليومية": "Daily work hours", "الإجازة الأسبوعية": "Weekly day off", "الأحد": "Sunday", "الاثنين": "Monday", "الثلاثاء": "Tuesday", "الأربعاء": "Wednesday", "الخميس": "Thursday", "الجمعة": "Friday", "السبت": "Saturday", "لا يوجد": "None", "العمل في الإجازة": "Work on day off", "كله إضافي": "All overtime", "لا يُحسب إضافي": "Not counted as overtime", "عرض": "Show", "تصدير Excel (CSV)": "Export Excel (CSV)", "ملخص الساعات": "Hours summary", "أيام العمل": "Work days", "إجمالي الساعات": "Total hours", "ساعات عادية": "Regular hours", "ساعات إضافية": "Overtime hours", "الإجمالي": "Total", "التفاصيل اليومية": "Daily details", "التاريخ": "Date", "اليوم": "Day", "الساعات": "Hours", "عادي": "Regular", "إضافي": "Overtime", "ملاحظات": "Notes", " (إجازة)": " (day off)", "⚠ نسي التسجيل": "⚠ Forgot to record", "لسه شغال": "Still working", "نسي التسجيل": "Forgot to record", "اعرض التقرير أولًا": "Show the report first"};
+function T(x){ return LANG==='en' && EN[x]!==undefined ? EN[x] : x; }
+const hasAr=x=>/[\u0600-\u06FF]/.test(x);
+function trText(n){
+  const p=n.parentNode;
+  if(!p||p.nodeName==='SCRIPT'||p.nodeName==='STYLE'||(p.closest&&p.closest('[data-nt]'))) return;
+  if(n.__o===undefined){ if(!hasAr(n.nodeValue)) return; n.__o=n.nodeValue; }
+  const o=n.__o, k=o.trim();
+  n.nodeValue=(LANG==='en'&&EN[k]!==undefined)?o.replace(k,EN[k]):o;
+}
+function trAttrs(el){
+  for(const a of ['placeholder','title']){
+    if(!el.hasAttribute||!el.hasAttribute(a)) continue;
+    const key='__o_'+a;
+    if(el[key]===undefined){ const v=el.getAttribute(a); if(!hasAr(v)) continue; el[key]=v; }
+    el.setAttribute(a,(LANG==='en'&&EN[el[key]]!==undefined)?EN[el[key]]:el[key]);
+  }
+}
+function trTree(root){
+  if(root.nodeType===3){ trText(root); return; }
+  if(root.nodeType!==1) return;
+  trAttrs(root);
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);
+  let n; while((n=w.nextNode())){ if(n.nodeType===3) trText(n); else trAttrs(n); }
+}
+new MutationObserver(ms=>{ if(LANG!=='en') return; ms.forEach(m=>m.addedNodes.forEach(trTree)); }).observe(document.body,{childList:true,subtree:true});
+function applyLang(){
+  document.documentElement.lang=LANG; document.documentElement.dir=LANG==='en'?'ltr':'rtl';
+  document.title=T('لوحة الحضور والانصراف');
+  trTree(document.body);
+  document.querySelectorAll('.langbtn').forEach(b=>b.textContent=LANG==='en'?'العربية':'English');
+}
+function updateWho(){ const u=auth.currentUser; if(!u||!role) return; $('who').textContent=u.email+T(role==='admin'?' (مدير)':' (مكتب)'); }
+function toggleLang(){
+  LANG=LANG==='en'?'ar':'en';
+  try{ localStorage.setItem('lang',LANG); }catch(e){}
+  applyLang();
+  if(role){ updateWho(); renderLive(); renderEmps(); renderSites(); renderReportFilter(); if(reportRows.length) runReport(); }
+}
+const _al=window.alert.bind(window), _co=window.confirm.bind(window), _pr=window.prompt.bind(window);
+window.alert=m=>_al(T(String(m))); window.confirm=m=>_co(T(String(m))); window.prompt=(m,d)=>_pr(T(String(m)),d);
+const locale=()=>LANG==='en'?'en-GB':'ar-EG';
+const fmtT = d => d ? d.toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}) : '...';
+const fmtDT = d => d ? d.toLocaleString(locale(),{dateStyle:'short',timeStyle:'short'}) : '...';
 let role = null, employees = [], sites = [], unsubs = [], todayRecs = [];
 const siteNameOf = r => (sites.find(s=>s.id===r?.siteId)?.name) || r?.siteName || '-';
 const mapLink = r => (r && r.lat!=null) ? ` <a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" title="عرض على الخريطة">📍</a>` : '';
@@ -156,7 +206,7 @@ const ERR={
  'auth/invalid-api-key':'مفتاح Firebase غير صحيح في firebase-config.json',
  'permission-denied':'قواعد Firestore غير منشورة أو لا تسمح بهذه العملية'
 };
-const errText=e=>ERR[e.code]||('خطأ: '+(e.code||'')+' '+(e.message||''));
+const errText=e=>ERR[e.code]||(T('خطأ: ')+(e.code||'')+' '+(e.message||''));
 function msg(t,ok){const m=$('lmsg');m.textContent=t||'';m.className='lmsg'+(t?(ok?' ok':' bad'):'');}
 function view(n){['login','reset','setup','claim'].forEach(v=>$('v-'+v).classList.toggle('hide',v!==n));msg('');}
 function togglePw(){const i=$('lp');i.type=i.type==='password'?'text':'password';}
@@ -202,7 +252,7 @@ async function handleUser(u){
   }
   role=a.data().role;
   $('login').classList.add('hide'); $('app').classList.remove('hide');
-  $('who').textContent=u.email+(role==='admin'?' (مدير)':' (مكتب)');
+  updateWho();
   buildTabs(); start();
 }
 async function claimAdmin(){
@@ -213,7 +263,7 @@ async function claimAdmin(){
     b.set(db.collection('admins').doc(u.uid),{role:'admin'});
     b.set(db.collection('meta').doc('setup'),{by:u.uid,at:firebase.firestore.FieldValue.serverTimestamp()});
     await b.commit(); handleUser(u);
-  }catch(e){ msg('لا يمكن التفعيل: غالبًا تم تعيين مدير من قبل، أو القواعد غير منشورة. ('+errText(e)+')'); }
+  }catch(e){ msg(T('لا يمكن التفعيل: غالبًا تم تعيين مدير من قبل، أو القواعد غير منشورة.')+' ('+errText(e)+')'); }
   busy(false);
 }
 async function doSetup(){
@@ -229,7 +279,7 @@ async function doSetup(){
     settingUp=false; handleUser(auth.currentUser);
   }catch(e){
     settingUp=false;
-    msg(errText(e)+' — لو الحساب اتعمل قبل كده سجّل دخول بيه.');
+    msg(errText(e)+T(' — لو الحساب اتعمل قبل كده سجّل دخول بيه.'));
     if(auth.currentUser) handleUser(auth.currentUser);
   }
   busy(false);
@@ -274,7 +324,7 @@ function renderLive(){
     const st = !r ? '<span class="tag abs">لم يحضر</span>' : r.type==='in' ? '<span class="tag in">حاضر</span>' : '<span class="tag out">انصرف</span>';
     const flag = r && r.source==='app' && !r.verified ? ' <span class="warn" title="بدون بصمة">⚠</span>' : '';
     return `<tr><td>${esc(e.name)}</td><td>${esc(e.code)}</td><td>${esc(e.kind==='office'?'مكتب':'عامل')}</td><td>${st}${flag}</td>
-      <td>${r?esc(siteNameOf(r))+mapLink(r):'-'}</td><td>${fmtT(r?.serverTime?.toDate())}</td></tr>`;
+      <td>${r?esc(siteNameOf(r))+mapLink(r)+(r.address&&r.address!==siteNameOf(r)?'<br><small>'+esc(r.address)+'</small>':''):'-'}</td><td>${fmtT(r?.serverTime?.toDate())}</td></tr>`;
   }).join('');
   $('t-live').innerHTML = `
     <div class="grid">
@@ -348,7 +398,7 @@ async function addEmp(){
     });
     $('n-msg').textContent='تمت الإضافة ✅';
     ['n-name','n-code','n-pass','n-phone'].forEach(i=>$(i).value='');
-  }catch(e){ alert('خطأ: '+e.message); }
+  }catch(e){ alert(T('خطأ: ')+e.message); }
 }
 async function addPanelUser(){
   const em=$('u-email').value.trim(), pw=$('u-pass').value;
@@ -359,7 +409,7 @@ async function addPanelUser(){
     await secondary.auth().signOut();
     await db.collection('admins').doc(cred.user.uid).set({role:$('u-role').value});
     alert('تمت الإضافة'); $('u-email').value=''; $('u-pass').value='';
-  }catch(e){ alert('خطأ: '+e.message); }
+  }catch(e){ alert(T('خطأ: ')+e.message); }
 }
 const toggleActive=(id,v)=>db.collection('employees').doc(id).update({active:v});
 const resetDevice=id=>confirm('فك ربط الجهاز؟ العامل يربط موبايله الجديد عند أول دخول')&&db.collection('employees').doc(id).update({deviceId:''});
@@ -390,58 +440,110 @@ function renderReportFilter(){
   sel.innerHTML='<option value="">كل الموظفين</option>'+employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   sel.value=cur;
 }
+const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 function renderReport(){
   const today=new Date().toISOString().slice(0,10);
   const m1=today.slice(0,8)+'01';
   $('t-report').innerHTML=`<div class="card">
     من <input id="r-from" type="date" value="${m1}"> إلى <input id="r-to" type="date" value="${today}">
     <select id="r-emp"></select>
+    <br>
+    ساعات العمل اليومية <input id="r-limit" type="number" step="0.5" min="1" value="8" style="width:80px">
+    الإجازة الأسبوعية
+    <select id="r-hol"><option value="5" selected>الجمعة</option><option value="6">السبت</option><option value="0">الأحد</option><option value="">لا يوجد</option></select>
+    العمل في الإجازة
+    <select id="r-mode"><option value="all" selected>كله إضافي</option><option value="none">لا يُحسب إضافي</option></select>
+    <br>
     <button class="b" onclick="runReport()">عرض</button>
     <button class="b g" onclick="exportCsv()">تصدير Excel (CSV)</button></div>
     <div id="r-out"></div>`;
   renderReportFilter();
 }
-let reportRows=[];
-async function runReport(){
-  const from=new Date($('r-from').value+'T00:00:00'), to=new Date($('r-to').value+'T23:59:59');
-  const s=await db.collection('attendance').where('serverTime','>=',from).where('serverTime','<=',to).orderBy('serverTime').get();
-  const emp=$('r-emp').value;
-  const recs=s.docs.map(d=>({id:d.id,...d.data()})).filter(r=>!emp||r.employeeId===emp);
-  // حساب الساعات: نزاوج كل حضور بالانصراف التالي له
+
+/* حساب التقرير: ساعات + عادي + إضافي (أكثر من الحد اليومي، وأيام الإجازة حسب الإعداد) */
+function buildReport(recs,cfg){
+  const todayKey=new Date().toLocaleDateString('en-CA');
   const by={};
-  recs.forEach(r=>{ (by[r.employeeId]=by[r.employeeId]||[]).push(r); });
-  reportRows=[];
+  recs.filter(r=>r.serverTime&&r.serverTime.toDate).forEach(r=>{ (by[r.employeeId]=by[r.employeeId]||[]).push(r); });
+  const rows=[];
   Object.values(by).forEach(list=>{
     const days={};
+    const dayOf=(r,ti)=>{
+      const key=ti.toLocaleDateString('en-CA');
+      return days[key]=days[key]||{emp:r.employeeName,date:key,first:ti,last:null,ms:0,site:siteNameOf(r),missing:false,open:false};
+    };
     let open=null;
     list.forEach(r=>{
       const t=r.serverTime.toDate();
-      if(r.type==='in'){ open=r; }
-      else if(open){
+      if(r.type==='in'){
+        if(open) dayOf(open,open.serverTime.toDate()).missing=true; // حضور بدون انصراف
+        open=r;
+      }else if(open){
         const ti=open.serverTime.toDate();
-        const key=ti.toLocaleDateString('en-CA');
-        const d=days[key]=days[key]||{emp:r.employeeName,date:key,first:ti,last:t,ms:0,site:siteNameOf(open)};
-        d.ms+=t-ti; d.last=t; open=null;
+        const d=dayOf(open,ti); d.ms+=t-ti; d.last=t; open=null;
+      }else{
+        const d=dayOf(r,t); d.missing=true; if(!d.last) d.last=t; // انصراف بدون حضور
       }
     });
-    Object.values(days).forEach(d=>reportRows.push(d));
+    if(open){
+      const ti=open.serverTime.toDate(); const d=dayOf(open,ti);
+      if(ti.toLocaleDateString('en-CA')===todayKey) d.open=true; else d.missing=true;
+    }
+    Object.values(days).forEach(d=>rows.push(d));
   });
-  reportRows.sort((a,b)=>a.date.localeCompare(b.date)||a.emp.localeCompare(b.emp));
-  const total={};
-  reportRows.forEach(d=>total[d.emp]=(total[d.emp]||0)+d.ms);
-  const h=ms=>(ms/3600000).toFixed(2);
-  $('r-out').innerHTML=`<div class="card scroll"><b>ملخص الساعات</b><table><tr><th>الاسم</th><th>إجمالي الساعات</th></tr>
-    ${Object.entries(total).map(([n,ms])=>`<tr><td>${esc(n)}</td><td>${h(ms)}</td></tr>`).join('')}</table></div>
-    <div class="card scroll"><b>التفاصيل اليومية</b><table><tr><th>الاسم</th><th>التاريخ</th><th>الموقع</th><th>حضور</th><th>انصراف</th><th>الساعات</th></tr>
-    ${reportRows.map(d=>`<tr><td>${esc(d.emp)}</td><td>${d.date}</td><td>${esc(d.site)}</td><td>${fmtT(d.first)}</td><td>${fmtT(d.last)}</td><td>${h(d.ms)}</td></tr>`).join('')}</table></div>`;
+  rows.forEach(d=>{
+    const hrs=d.ms/3600000;
+    d.hours=hrs;
+    d.dow=new Date(d.date+'T00:00:00').getDay();
+    d.isHol=cfg.holiday!==''&&d.dow===Number(cfg.holiday);
+    if(d.isHol){ d.ot=cfg.mode==='all'?hrs:0; d.reg=hrs-d.ot; }
+    else{ d.reg=Math.min(hrs,cfg.limit); d.ot=Math.max(0,hrs-cfg.limit); }
+  });
+  rows.sort((a,b)=>a.date.localeCompare(b.date)||a.emp.localeCompare(b.emp));
+  const sum={};
+  rows.forEach(d=>{
+    const x=sum[d.emp]=sum[d.emp]||{emp:d.emp,days:0,hours:0,reg:0,ot:0};
+    if(d.ms>0) x.days++;
+    x.hours+=d.hours; x.reg+=d.reg; x.ot+=d.ot;
+  });
+  return {rows,summary:Object.values(sum).sort((a,b)=>a.emp.localeCompare(b.emp))};
+}
+
+let reportRows=[], reportSummary=[];
+async function runReport(){
+  const from=new Date($('r-from').value+'T00:00:00'), to=new Date($('r-to').value+'T23:59:59');
+  const cfg={limit:parseFloat($('r-limit').value)||8, holiday:$('r-hol').value, mode:$('r-mode').value};
+  const s=await db.collection('attendance').where('serverTime','>=',from).where('serverTime','<=',to).orderBy('serverTime').get();
+  const emp=$('r-emp').value;
+  const recs=s.docs.map(d=>({id:d.id,...d.data()})).filter(r=>!emp||r.employeeId===emp);
+  const rep=buildReport(recs,cfg);
+  reportRows=rep.rows; reportSummary=rep.summary;
+  const h=x=>x.toFixed(2);
+  const tot=reportSummary.reduce((a,x)=>({days:a.days+x.days,hours:a.hours+x.hours,reg:a.reg+x.reg,ot:a.ot+x.ot}),{days:0,hours:0,reg:0,ot:0});
+  $('r-out').innerHTML=`<div class="card scroll"><b>ملخص الساعات</b>
+    <table><tr><th>الاسم</th><th>أيام العمل</th><th>إجمالي الساعات</th><th>ساعات عادية</th><th>ساعات إضافية</th></tr>
+    ${reportSummary.map(x=>`<tr><td>${esc(x.emp)}</td><td>${x.days}</td><td>${h(x.hours)}</td><td>${h(x.reg)}</td><td><b style="color:#2e7d32">${h(x.ot)}</b></td></tr>`).join('')}
+    <tr><th>الإجمالي</th><th>${tot.days}</th><th>${h(tot.hours)}</th><th>${h(tot.reg)}</th><th>${h(tot.ot)}</th></tr></table></div>
+    <div class="card scroll"><b>التفاصيل اليومية</b>
+    <table><tr><th>الاسم</th><th>التاريخ</th><th>اليوم</th><th>الموقع</th><th>حضور</th><th>انصراف</th><th>الساعات</th><th>عادي</th><th>إضافي</th><th>ملاحظات</th></tr>
+    ${reportRows.map(d=>`<tr${d.isHol?' style="background:#fff8e1"':''}><td>${esc(d.emp)}</td><td>${d.date}</td><td>${esc(T(DAYS[d.dow]))}${d.isHol?esc(T(' (إجازة)')):''}</td><td>${esc(d.site)}</td>
+      <td>${fmtT(d.first)}</td><td>${d.last?fmtT(d.last):'-'}</td><td>${h(d.hours)}</td><td>${h(d.reg)}</td>
+      <td>${d.ot>0?'<b style="color:#2e7d32">'+h(d.ot)+'</b>':h(d.ot)}</td>
+      <td>${d.missing?'<span class="warn">⚠ نسي التسجيل</span>':d.open?'لسه شغال':''}</td></tr>`).join('')}</table></div>`;
 }
 function exportCsv(){
   if(!reportRows.length) return alert('اعرض التقرير أولًا');
-  const lines=['الاسم,التاريخ,الموقع,حضور,انصراف,الساعات',
-    ...reportRows.map(d=>[d.emp,d.date,d.site,fmtT(d.first),fmtT(d.last),(d.ms/3600000).toFixed(2)].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))];
+  const q=v=>`"${String(v).replace(/"/g,'""')}"`;
+  const h=x=>x.toFixed(2);
+  const lines=['الاسم,التاريخ,اليوم,الموقع,حضور,انصراف,الساعات,عادي,إضافي,ملاحظات'.split(',').map(T).join(','),
+    ...reportRows.map(d=>[d.emp,d.date,T(DAYS[d.dow])+(d.isHol?T(' (إجازة)'):''),d.site,fmtT(d.first),d.last?fmtT(d.last):'',h(d.hours),h(d.reg),h(d.ot),d.missing?T('نسي التسجيل'):''].map(q).join(',')),
+    '',
+    'الاسم,أيام العمل,إجمالي الساعات,ساعات عادية,ساعات إضافية'.split(',').map(T).join(','),
+    ...reportSummary.map(x=>[x.emp,x.days,h(x.hours),h(x.reg),h(x.ot)].map(q).join(','))];
   const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='attendance-report.csv'; a.click();
 }
+applyLang();
 </script>
 </body>
 </html>
